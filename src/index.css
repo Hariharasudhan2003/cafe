@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+:root {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: #f8fafc;
+  color: #1e293b;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden !important;
+  max-width: 100vw;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden !important;
+}
+
+/* Hide horizontal scrollbar globally */
+::-webkit-scrollbar:horizontal {
+  display: none !important;
+  height: 0px !important;
+}
+
+/* Utility to hide scrollbars */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none !important;
+}
