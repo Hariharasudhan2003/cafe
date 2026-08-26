@@ -7,14 +7,18 @@ import {
   Download, 
   Search,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Calendar as CalendarIcon,
+  X,
+  Printer
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { Navbar } from '../components/Navbar';
+import { ReceiptModal, type ReceiptData } from '../components/ReceiptModal';
 import { apiGetBills, apiGetOrders, apiGetSettings } from '../services/api';
 
 interface ReportsPageProps {
-  onNavigate?: (tab: string) => void;
+  onNavigate?: (tab: string, extraData?: any) => void;
   isDarkMode?: boolean;
 }
 
@@ -23,6 +27,10 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
   const [showAllPosItems, setShowAllPosItems] = useState<boolean>(false);
   const [showAllOrders, setShowAllOrders] = useState<boolean>(false);
   const [timeRange, setTimeRange] = useState<'Today' | 'This Week' | 'Monthly'>('Today');
+
+  // Order Detail Modal State on Reports Page
+  const [selectedOrderModal, setSelectedOrderModal] = useState<any>(null);
+  const [activeReceipt, setActiveReceipt] = useState<ReceiptData | null>(null);
 
   // Multi-Filter Toolbar States
   const [orderIdSearch, setOrderIdSearch] = useState<string>('');
@@ -388,9 +396,19 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   {topOrdersList.map((order: any, idx: number) => (
-                    <div key={idx} className={`p-3.5 rounded-xl border flex items-center justify-between transition-all ${
-                      isDarkMode ? 'bg-slate-800/60 border-slate-700/60 hover:bg-slate-800' : 'bg-slate-50/80 border-slate-200/80 hover:bg-white shadow-2xs'
-                    }`}>
+                    <div 
+                      key={idx} 
+                      onClick={() => {
+                        const fullOrder = orders.find((o: any) => o.code === order.code || o._id === order.id || o.customer === order.name) || order;
+                        setSelectedOrderModal(fullOrder);
+                      }}
+                      className={`p-3.5 rounded-xl border flex items-center justify-between transition-all cursor-pointer hover:scale-[1.005] active:scale-[0.99] ${
+                        isDarkMode 
+                          ? 'bg-slate-800/60 border-slate-700/60 hover:bg-slate-800 hover:border-emerald-500/50' 
+                          : 'bg-slate-50/80 border-slate-200/80 hover:bg-white hover:border-emerald-400 shadow-2xs'
+                      }`}
+                      title={`Click to view ${order.name}'s order details`}
+                    >
                       <div className="flex items-center gap-3">
                         <span className={`px-2.5 py-1 rounded-lg text-xs font-extrabold ${
                           isDarkMode ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
@@ -398,7 +416,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
                           {order.code || `#FN-0${idx + 1}`}
                         </span>
                         <div>
-                          <span className={`font-bold text-sm block ${textHeadingClass}`}>{order.name}</span>
+                          <span className={`font-bold text-sm block hover:underline hover:text-emerald-500 ${textHeadingClass}`}>{order.name}</span>
                           <span className={`text-xs font-semibold ${textSubClass}`}>Catering Function Package</span>
                         </div>
                       </div>
@@ -572,6 +590,161 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
 
         </main>
       </div>
+
+      {/* Order Details Modal directly on Reports Page - 100% Match to Image 1 */}
+      {selectedOrderModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white text-[#1c1917] border border-gray-100 rounded-2xl shadow-2xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto">
+            
+            {/* Close Button */}
+            <button
+              onClick={() => setSelectedOrderModal(null)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-gray-100 transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Header */}
+            <div className="flex items-start justify-between border-b pb-3 mb-4 border-gray-300">
+              <div>
+                <span className="text-xs font-extrabold text-[#b45309] uppercase tracking-wider block mb-0.5">
+                  {selectedOrderModal.code || '#FN-490'}
+                </span>
+                <h3 className="text-xl font-extrabold text-[#1c1917]">
+                  {selectedOrderModal.customer || selectedOrderModal.name || 'Customer'}
+                </h3>
+                <p className="text-xs text-gray-500 font-medium mt-0.5">
+                  {selectedOrderModal.subDetail || selectedOrderModal.eventName || 'Catering Function'}
+                </p>
+              </div>
+              
+              {/* Status Badge */}
+              <div className={`px-3 py-1 rounded-full text-xs font-extrabold border flex items-center gap-1 shadow-2xs ${
+                selectedOrderModal.status === 'Pending' ? 'bg-[#fef9c3] text-[#854d0e] border-[#fde047]' :
+                selectedOrderModal.status === 'Completed' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' :
+                'bg-rose-100 text-rose-800 border-rose-300'
+              }`}>
+                <span>{selectedOrderModal.status || 'Pending'}</span>
+                <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+              </div>
+            </div>
+
+            {/* Body Info List */}
+            <div className="space-y-2.5 text-xs mb-4">
+              
+              {/* Event Date & Time */}
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-gray-500 font-semibold flex items-center gap-1.5">
+                  <CalendarIcon className="w-3.5 h-3.5 text-gray-400" />
+                  Event Date & Time:
+                </span>
+                <span className="font-extrabold text-[#1c1917]">{selectedOrderModal.eventDate || selectedOrderModal.date || '2026-08-30 09:00'}</span>
+              </div>
+
+              {/* Contact Phone */}
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-gray-500 font-semibold">Contact Phone:</span>
+                <span className="font-extrabold text-[#1c1917]">{selectedOrderModal.contactNumber || selectedOrderModal.phone || '6387452100'}</span>
+              </div>
+
+              {/* Venue Address */}
+              <div className="py-2 border-b border-gray-100">
+                <span className="text-gray-500 font-semibold block mb-0.5">Venue Address:</span>
+                <span className="font-bold text-[#1c1917]">{selectedOrderModal.deliveryAddress || selectedOrderModal.address || 'mamsapuram,rajapalayam'}</span>
+              </div>
+
+              {/* Items Included */}
+              <div className="py-2 border-b border-gray-100">
+                <span className="text-gray-500 font-semibold block mb-1.5">Items Included:</span>
+                <div className="font-bold text-[#334155] bg-[#f8fafc] p-3 rounded-xl border border-gray-100 leading-relaxed">
+                  {selectedOrderModal.items || (Array.isArray(selectedOrderModal.orderItems) ? selectedOrderModal.orderItems.map((i: any) => `${i.quantity}x ${i.name}`).join(', ') : '50x kesari sweet, 200x Ginger Tea, 50x Gulab Jamun')}
+                </div>
+              </div>
+
+              {/* Financial Breakup Yellow Box */}
+              <div className="bg-[#fffbeb] rounded-2xl p-4 border border-[#fde68a] space-y-2.5 my-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-[#334155] font-extrabold">Total Order Amount:</span>
+                  <span className="text-sm font-black text-[#1e293b]">₹{(selectedOrderModal.amount || 0).toLocaleString()}</span>
+                </div>
+
+                <div className="flex justify-between items-center text-[#15803d]">
+                  <span className="font-extrabold">Advance Paid:</span>
+                  <span className="text-sm font-black">₹{(selectedOrderModal.advanceReceived || 0).toLocaleString()}</span>
+                </div>
+
+                <div className="flex justify-between items-center pt-2 border-t border-[#fde68a]">
+                  <span className="text-sm font-black text-[#1e293b]">Net Balance Due to Pay:</span>
+                  <span className="text-base font-black text-[#ea580c]">
+                    ₹{(selectedOrderModal.balanceDue !== undefined ? selectedOrderModal.balanceDue : Math.max(0, (selectedOrderModal.amount || 0) - (selectedOrderModal.advanceReceived || 0))).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons (3 Buttons) */}
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={() => {
+                  const itemsList = Array.isArray(selectedOrderModal.orderItems) && selectedOrderModal.orderItems.length > 0
+                    ? selectedOrderModal.orderItems.map((i: any) => ({ name: i.name, quantity: i.quantity, price: i.price }))
+                    : [{ name: selectedOrderModal.items || 'Catering Order', quantity: 1, price: selectedOrderModal.amount || 0 }];
+
+                  setActiveReceipt({
+                    billNo: selectedOrderModal.code || '#FN-ORDER',
+                    date: selectedOrderModal.eventDate || new Date().toISOString().split('T')[0],
+                    time: '10:00 AM',
+                    customerName: selectedOrderModal.customer || selectedOrderModal.name,
+                    servedBy: 'Event Catering',
+                    items: itemsList,
+                    subtotal: selectedOrderModal.amount || 0,
+                    gstRate: 0,
+                    cgst: 0,
+                    sgst: 0,
+                    grandTotal: selectedOrderModal.amount || 0,
+                    paymentMethod: 'Cash / Event',
+                    cafeName: cafeSettings.cafeName,
+                    branchLocation: cafeSettings.branchLocation,
+                    logoUrl: cafeSettings.logoUrl
+                  });
+                }}
+                className="flex-1 bg-[#78350f] hover:bg-[#58270b] text-white font-extrabold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition active:scale-[0.98] cursor-pointer"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Print Receipt</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  if (onNavigate) {
+                    onNavigate('Orders');
+                  }
+                  setSelectedOrderModal(null);
+                }}
+                className="flex-1 bg-white hover:bg-amber-50 text-[#b45309] border-2 border-[#f59e0b] font-extrabold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition active:scale-[0.98] cursor-pointer"
+              >
+                <ChevronDown className="w-4 h-4 -rotate-90 text-[#f59e0b]" />
+                <span>Edit Order</span>
+              </button>
+
+              <button
+                onClick={() => setSelectedOrderModal(null)}
+                className="flex-1 bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#475569] font-bold py-2.5 rounded-xl text-xs transition active:scale-[0.98] cursor-pointer text-center"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 1-Click Thermal Receipt Modal */}
+      {activeReceipt && (
+        <ReceiptModal
+          receipt={activeReceipt}
+          onClose={() => setActiveReceipt(null)}
+        />
+      )}
 
     </div>
   );
