@@ -1,26 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, 
-  Receipt, 
   ShoppingCart, 
+  Receipt, 
   Wallet, 
   Download, 
-  Filter,
-  Search
+  Search,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { Navbar } from '../components/Navbar';
 import { apiGetBills, apiGetOrders, apiGetSettings } from '../services/api';
-
-interface Transaction {
-  orderId: string;
-  dateTime: string;
-  itemsSummary: string;
-  total: string;
-  paymentType: 'Card' | 'Cash' | 'UPI';
-  status: 'COMPLETED' | 'REFUNDED' | 'PENDING';
-  rawDate?: string;
-}
 
 interface ReportsPageProps {
   onNavigate?: (tab: string) => void;
@@ -29,10 +20,11 @@ interface ReportsPageProps {
 
 export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode = false }) => {
   const [activeTab, setActiveTab] = useState<string>('Reports');
-  const [timeRange, setTimeRange] = useState<'Today' | 'This Week' | 'Monthly'>('This Week');
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  
-  // Recent Transactions Table Filters
+  const [showAllPosItems, setShowAllPosItems] = useState<boolean>(false);
+  const [showAllOrders, setShowAllOrders] = useState<boolean>(false);
+  const [timeRange, setTimeRange] = useState<'Today' | 'This Week' | 'Monthly'>('Today');
+
+  // Multi-Filter Toolbar States
   const [orderIdSearch, setOrderIdSearch] = useState<string>('');
   const [paymentFilter, setPaymentFilter] = useState<string>('ALL');
   const [filterDate, setFilterDate] = useState<string>('');
@@ -44,7 +36,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
 
   useEffect(() => {
     apiGetSettings().then(data => { if (data) setCafeSettings(data); }).catch(() => {});
-    
+
     Promise.all([
       apiGetBills().catch(() => []),
       apiGetOrders().catch(() => [])
@@ -54,11 +46,6 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
     });
   }, []);
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
-
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     if (onNavigate) {
@@ -66,118 +53,139 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
     }
   };
 
-  // Date Range Filtering Helper
-  const isWithinRange = (dateString?: string, createdAtString?: string, range?: string) => {
-    let dateObj: Date | null = null;
-    if (createdAtString) {
-      dateObj = new Date(createdAtString);
-    } else if (dateString) {
-      dateObj = new Date(dateString);
-    }
-
-    if (!dateObj || isNaN(dateObj.getTime())) {
-      return true;
-    }
+  // Helper date filtering function based on Today, This Week, Monthly
+  const isDateInTimeRange = (dateStr: string) => {
+    if (!dateStr) return true;
 
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const itemDayStart = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()).getTime();
+    const todayYear = now.getFullYear();
+    const todayMonth = now.getMonth();
+    const todayDate = now.getDate();
 
-    if (range === 'Today') {
-      return itemDayStart === todayStart;
-    } else if (range === 'This Week') {
-      const sevenDaysAgo = todayStart - (7 * 24 * 60 * 60 * 1000);
-      return itemDayStart >= sevenDaysAgo;
-    } else if (range === 'Monthly') {
-      const thirtyDaysAgo = todayStart - (30 * 24 * 60 * 60 * 1000);
-      return itemDayStart >= thirtyDaysAgo;
+    let itemDate: Date | null = null;
+    const lower = dateStr.toLowerCase().trim();
+
+    if (lower === 'today') {
+      itemDate = now;
+    } else if (/^\d{4}-\d{2}-\d{2}/.test(lower)) {
+      const parts = lower.split('T')[0].split('-');
+      itemDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    } else {
+      const parsed = new Date(dateStr);
+      if (!isNaN(parsed.getTime())) itemDate = parsed;
+    }
+
+    if (!itemDate) return true;
+
+    if (timeRange === 'Today') {
+      return (
+        itemDate.getFullYear() === todayYear &&
+        itemDate.getMonth() === todayMonth &&
+        itemDate.getDate() === todayDate
+      );
+    } else if (timeRange === 'This Week') {
+      const currentDay = now.getDay();
+      const distanceToMon = (currentDay + 6) % 7;
+
+      const startOfWeek = new Date(todayYear, todayMonth, todayDate - distanceToMon, 0, 0, 0);
+      const endOfWeek = new Date(todayYear, todayMonth, todayDate - distanceToMon + 6, 23, 59, 59, 999);
+
+      const sevenDaysAgo = new Date(todayYear, todayMonth, todayDate - 7, 0, 0, 0);
+      const sevenDaysFuture = new Date(todayYear, todayMonth, todayDate + 7, 23, 59, 59, 999);
+
+      const inCurrentWeek = itemDate >= startOfWeek && itemDate <= endOfWeek;
+      const in7DaysRange = itemDate >= sevenDaysAgo && itemDate <= sevenDaysFuture;
+
+      return inCurrentWeek || in7DaysRange;
+    } else if (timeRange === 'Monthly') {
+      return itemDate.getMonth() === todayMonth && itemDate.getFullYear() === todayYear;
     }
     return true;
   };
 
-  // Filtered Datasets based on selected timeRange
-  const filteredBills = bills.filter(b => isWithinRange(b.date || b.time, b.createdAt, timeRange));
-  const filteredOrders = orders.filter(o => isWithinRange(o.eventDateOnly || o.eventDate, o.createdAt, timeRange));
+  const filteredBills = bills.filter((b: any) => isDateInTimeRange(b.date || b.createdAt));
+  const filteredOrders = orders.filter((o: any) => isDateInTimeRange(o.eventDate || o.createdAt));
 
-  // Live Dynamic Calculations
-  // 1. POS Total Sales: Only POS Bills
-  const posSalesVal = filteredBills.reduce((sum, b) => sum + (b.grandTotal || b.amount || 0), 0);
-
-  // 2. Total Orders: Only count of Function Event Orders
+  // Dynamic Calculated Metrics for Top 4 Cards
+  const posSalesVal = filteredBills.reduce((sum: number, b: any) => sum + (b.grandTotal || b.amount || 0), 0);
   const totalOrdersCount = filteredOrders.length;
+  const orderRevenueVal = filteredOrders.reduce((sum: number, o: any) => sum + (o.amount || 0), 0);
+  const totalCombinedSales = posSalesVal + orderRevenueVal;
+  const netProfitVal = Math.round(totalCombinedSales * 0.40); // 40% Estimated Profit Margin
 
-  // 3. Order Revenue: Total amount earned from Function Event Orders
-  const orderRevenueVal = filteredOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
-
-  // 4. Estimated Net Profit: 40% margin on combined POS sales + Event Order Revenue
-  const netProfitVal = (posSalesVal + orderRevenueVal) * 0.4;
-
-  // Map Live Transactions from POS Bills and Function Event Orders
-  const liveTransactions: Transaction[] = [
-    ...filteredBills.map((b: any) => ({
-      orderId: b.billNo || b._id || `#BILL-${Date.now().toString().slice(-4)}`,
-      dateTime: `${b.date || 'Today'}, ${b.time || ''}`.trim(),
-      rawDate: b.date || b.createdAt || '',
-      itemsSummary: b.items ? b.items.map((i: any) => `${i.quantity || 1}x ${i.product?.name || i.name || 'Item'}`).join(', ') : 'POS Sale Items',
-      total: `₹${(b.grandTotal || b.amount || 0).toLocaleString()}`,
-      paymentType: (b.paymentMethod || 'Cash') as any,
-      status: (b.status === 'Held' ? 'PENDING' : 'COMPLETED') as any
-    })),
-    ...filteredOrders.map((o: any) => ({
-      orderId: o.code || `#ORD-${Date.now().toString().slice(-4)}`,
-      dateTime: o.eventDate || 'Function Order',
-      rawDate: o.eventDateOnly || o.eventDate || o.createdAt || '',
-      itemsSummary: o.items || 'Pre-order Items',
-      total: `₹${(o.amount || 0).toLocaleString()}`,
-      paymentType: 'Cash' as any,
-      status: (o.status === 'Cancelled' ? 'REFUNDED' : o.status === 'Completed' ? 'COMPLETED' : 'PENDING') as any
-    }))
-  ];
-
-  // Apply Recent Transactions Filters (Order ID, Payment Method, Date, Status)
-  const filteredTransactions = liveTransactions.filter(t => {
-    // 1. Order ID Search
-    if (orderIdSearch.trim() && !t.orderId.toLowerCase().includes(orderIdSearch.trim().toLowerCase())) {
-      return false;
-    }
-    // 2. Payment Method Filter (Cash / UPI / Card)
-    if (paymentFilter !== 'ALL' && t.paymentType !== paymentFilter) {
-      return false;
-    }
-    // 3. Specific Date Picker Filter
-    if (filterDate) {
-      const matchDateStr = t.rawDate || t.dateTime;
-      if (!matchDateStr.includes(filterDate)) {
-        return false;
-      }
-    }
-    // 4. Status Filter
-    if (statusFilter !== 'ALL' && t.status !== statusFilter) {
-      return false;
-    }
-    return true;
-  });
-
-  // Top Items Sold computed from live bills for Vertical Bar Chart
-  const itemMap: Record<string, number> = {};
+  // Top Selling Items from live filtered bills
+  const itemQuantities: Record<string, { qty: number; totalPrice: number }> = {};
   filteredBills.forEach((b: any) => {
     if (Array.isArray(b.items)) {
       b.items.forEach((i: any) => {
         const name = i.product?.name || i.name || 'Item';
         const qty = i.quantity || 1;
-        itemMap[name] = (itemMap[name] || 0) + qty;
+        const price = i.product?.price || i.unitPrice || i.price || 0;
+        if (!itemQuantities[name]) {
+          itemQuantities[name] = { qty: 0, totalPrice: 0 };
+        }
+        itemQuantities[name].qty += qty;
+        itemQuantities[name].totalPrice += (qty * price);
       });
     }
   });
 
-  const topItemsList = Object.entries(itemMap)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6)
-    .map(([name, qty]) => ({ name, qty }));
+  const topItemsListAll = Object.entries(itemQuantities)
+    .map(([name, data]) => ({ name, qty: data.qty, totalPrice: data.totalPrice }))
+    .sort((a, b) => b.qty - a.qty);
+
+  const topItemsList = showAllPosItems ? topItemsListAll : topItemsListAll.slice(0, 5);
+
+  // Top Function & Event Orders for Orders Text List
+  const topOrdersListAll = filteredOrders
+    .map((o: any) => ({
+      name: o.customer || o.eventName || o.code || 'Order',
+      amount: o.amount || 0,
+      code: o.code,
+      status: o.status || 'Pending'
+    }))
+    .sort((a: any, b: any) => b.amount - a.amount);
+
+  const topOrdersList = showAllOrders ? topOrdersListAll : topOrdersListAll.slice(0, 5);
+
+  // Transactions list compiled from real bills
+  const allTransactions = filteredBills.map((b: any) => {
+    const itemsSummary = Array.isArray(b.items)
+      ? b.items.map((i: any) => `${i.quantity || 1}x ${i.product?.name || i.name || 'Item'}`).join(', ')
+      : 'POS Billing Items';
+
+    const statusVal = b.status === 'Held' ? 'PENDING' : (b.status ? b.status.toUpperCase() : 'COMPLETED');
+
+    return {
+      orderId: b.billNo || b._id || `#B-${Date.now().toString().slice(-4)}`,
+      dateTime: `${b.date || '2026-08-25'} ${b.time || '10:00 AM'}`,
+      itemsSummary,
+      paymentType: b.paymentMethod || 'Cash',
+      status: statusVal,
+      total: `₹${(b.grandTotal || b.amount || 0).toLocaleString()}`,
+      rawDate: b.date || b.createdAt || '',
+      rawAmount: b.grandTotal || b.amount || 0
+    };
+  });
+
+  // Apply Multi-Filter Toolbar Rules to Transactions
+  const filteredTransactions = allTransactions.filter(tx => {
+    const matchesId = !orderIdSearch || tx.orderId.toLowerCase().includes(orderIdSearch.toLowerCase());
+    const matchesPayment = paymentFilter === 'ALL' || tx.paymentType.toLowerCase() === paymentFilter.toLowerCase();
+    const matchesDate = !filterDate || tx.rawDate.startsWith(filterDate);
+    const matchesStatus = statusFilter === 'ALL' || tx.status === statusFilter;
+    return matchesId && matchesPayment && matchesDate && matchesStatus;
+  });
 
   const handleExport = () => {
-    showToast(`Exported ${timeRange} Sales Report PDF!`);
+    alert(`Exporting ${timeRange} Cafe Analytics PDF Report...`);
   };
+
+  const cardBgClass = isDarkMode 
+    ? 'bg-[#1e293b] border-slate-800 text-white' 
+    : 'bg-white border-orange-100/80 text-gray-900';
+  const textHeadingClass = isDarkMode ? 'text-white' : 'text-gray-900';
+  const textSubClass = isDarkMode ? 'text-slate-400' : 'text-gray-500';
 
   return (
     <div className={`flex h-screen font-sans overflow-hidden transition-colors duration-200 ${
@@ -206,18 +214,20 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
         />
 
         {/* Reports Body */}
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">
+        <main className="flex-1 overflow-y-auto scrollbar-none p-6 space-y-6">
           
           {/* Page Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Analytics & Reports</h1>
-              <p className="text-sm text-gray-500 mt-0.5">Overview of sales performance, revenue & transaction history.</p>
+              <h1 className={`text-2xl font-bold tracking-tight ${textHeadingClass}`}>Analytics & Reports</h1>
+              <p className={`text-sm mt-0.5 ${textSubClass}`}>Overview of sales performance, revenue & transaction history.</p>
             </div>
 
             <div className="flex items-center gap-3">
               {/* Time Range Filter Pills */}
-              <div className="flex items-center bg-gray-100 p-1 rounded-xl text-xs font-medium border border-gray-200/60">
+              <div className={`flex items-center p-1 rounded-xl text-xs font-medium border ${
+                isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-200/60'
+              }`}>
                 {(['Today', 'This Week', 'Monthly'] as const).map((range) => (
                   <button
                     key={range}
@@ -225,7 +235,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
                     className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
                       timeRange === range
                         ? 'bg-[#78350f] text-white font-bold shadow-xs'
-                        : 'text-gray-600 hover:text-gray-900'
+                        : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
                     {range}
@@ -248,139 +258,187 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             
             {/* Card 1: POS Total Sales */}
-            <div className="bg-white rounded-2xl p-5 border border-orange-100/80 shadow-2xs">
+            <div className={`${cardBgClass} rounded-2xl p-5 border shadow-2xs`}>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">TOTAL POS SALES</span>
-                <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-600">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
                   <TrendingUp className="w-5 h-5" />
                 </div>
               </div>
               <div className="mt-3">
-                <h3 className="text-2xl font-extrabold text-gray-900">₹{posSalesVal.toLocaleString()}</h3>
-                <span className="text-xs text-emerald-600 font-semibold mt-1 block">Live POS sales only</span>
+                <h3 className={`text-2xl font-extrabold ${textHeadingClass}`}>₹{posSalesVal.toLocaleString()}</h3>
+                <span className="text-xs text-emerald-500 font-semibold mt-1 block">Live POS sales only</span>
               </div>
             </div>
 
             {/* Card 2: Total Event Orders */}
-            <div className="bg-white rounded-2xl p-5 border border-orange-100/80 shadow-2xs">
+            <div className={`${cardBgClass} rounded-2xl p-5 border shadow-2xs`}>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">TOTAL ORDERS</span>
-                <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-600">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
                   <ShoppingCart className="w-5 h-5" />
                 </div>
               </div>
               <div className="mt-3">
-                <h3 className="text-2xl font-extrabold text-gray-900">{totalOrdersCount}</h3>
-                <span className="text-xs text-emerald-600 font-semibold mt-1 block">Function event orders count</span>
+                <h3 className={`text-2xl font-extrabold ${textHeadingClass}`}>{totalOrdersCount}</h3>
+                <span className="text-xs text-emerald-500 font-semibold mt-1 block">Function event orders count</span>
               </div>
             </div>
 
             {/* Card 3: Order Revenue */}
-            <div className="bg-white rounded-2xl p-5 border border-orange-100/80 shadow-2xs">
+            <div className={`${cardBgClass} rounded-2xl p-5 border shadow-2xs`}>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">ORDER REVENUE</span>
-                <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-600">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
                   <Receipt className="w-5 h-5" />
                 </div>
               </div>
               <div className="mt-3">
-                <h3 className="text-2xl font-extrabold text-gray-900">₹{orderRevenueVal.toLocaleString()}</h3>
-                <span className="text-xs text-amber-700 font-semibold mt-1 block">Total amount from event orders</span>
+                <h3 className={`text-2xl font-extrabold ${textHeadingClass}`}>₹{orderRevenueVal.toLocaleString()}</h3>
+                <span className="text-xs text-amber-500 font-semibold mt-1 block">Total amount from event orders</span>
               </div>
             </div>
 
             {/* Card 4: Estimated Net Profit */}
-            <div className="bg-white rounded-2xl p-5 border border-orange-100/80 shadow-2xs">
+            <div className={`${cardBgClass} rounded-2xl p-5 border shadow-2xs`}>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">EST. NET PROFIT</span>
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200/60 flex items-center justify-center text-emerald-600">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-500">
                   <Wallet className="w-5 h-5" />
                 </div>
               </div>
               <div className="mt-3">
-                <h3 className="text-2xl font-extrabold text-gray-900">₹{netProfitVal.toLocaleString()}</h3>
-                <span className="text-xs text-emerald-600 font-semibold mt-1 block">Est. 40% margin</span>
+                <h3 className={`text-2xl font-extrabold ${textHeadingClass}`}>₹{netProfitVal.toLocaleString()}</h3>
+                <span className="text-xs text-emerald-500 font-semibold mt-1 block">Est. 40% margin</span>
               </div>
             </div>
 
           </div>
 
-          {/* Top Selling Items Vertical Bar Chart Section */}
-          <div className="bg-white rounded-2xl p-6 border border-gray-200/80 shadow-2xs">
-            <div className="flex items-center justify-between mb-6 border-b border-gray-100 pb-3">
-              <div>
-                <h3 className="text-base font-bold text-gray-900 tracking-tight">Top Selling Items (POS Sales Vertical Bar Chart)</h3>
-                <p className="text-xs text-gray-400 mt-0.5">Vertical quantity breakdown of top sold menu items ({timeRange})</p>
-              </div>
-            </div>
-
-            {topItemsList.length === 0 ? (
-              <p className="text-xs text-gray-400 py-10 text-center font-medium">No sales recorded in this period to render vertical bar chart.</p>
-            ) : (
-              <div className="relative h-64 w-full pt-4 flex flex-col justify-between">
-                
-                {/* Y-Axis Grid Lines */}
-                <div className="absolute inset-0 flex flex-col justify-between pointer-events-none text-xs text-gray-400 font-medium">
-                  <div className="border-b border-gray-100 pb-1 flex justify-between">
-                    <span>{Math.max(...topItemsList.map(t => t.qty), 1)} Sold</span>
-                  </div>
-                  <div className="border-b border-gray-100 pb-1 flex justify-between">
-                    <span>{Math.round(Math.max(...topItemsList.map(t => t.qty), 1) * 0.75)}</span>
-                  </div>
-                  <div className="border-b border-gray-100 pb-1 flex justify-between">
-                    <span>{Math.round(Math.max(...topItemsList.map(t => t.qty), 1) * 0.5)}</span>
-                  </div>
-                  <div className="border-b border-gray-100 pb-1 flex justify-between">
-                    <span>{Math.round(Math.max(...topItemsList.map(t => t.qty), 1) * 0.25)}</span>
-                  </div>
-                  <div className="border-b border-gray-200 pb-1 flex justify-between">
-                    <span>0</span>
-                  </div>
+          {/* List 1: Top Selling Items (POS Sales) - Full Width with 2 Columns Side-by-Side */}
+          <div className={`${cardBgClass} rounded-2xl p-6 border shadow-2xs flex flex-col justify-between`}>
+            <div>
+              <div className={`flex items-center justify-between mb-4 border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
+                <div>
+                  <h3 className={`text-base font-bold tracking-tight ${textHeadingClass}`}>Top Selling Items (POS Sales)</h3>
+                  <p className={`text-xs mt-0.5 ${textSubClass}`}>Ranked text breakdown of top sold menu items ({timeRange})</p>
                 </div>
+              </div>
 
-                {/* Vertical Bars Plotting */}
-                <div className="relative z-10 h-48 mt-4 ml-10 flex items-end justify-around gap-4 px-4">
+              {topItemsList.length === 0 ? (
+                <p className={`text-xs py-10 text-center font-medium ${textSubClass}`}>No POS sales recorded in this period.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   {topItemsList.map((item, idx) => {
-                    const maxQty = Math.max(...topItemsList.map(t => t.qty), 1);
-                    const heightPct = Math.max(15, Math.round((item.qty / maxQty) * 100));
+                    const totalItemsQty = topItemsListAll.reduce((sum: number, i: any) => sum + i.qty, 0) || 1;
+                    const pct = Math.round((item.qty / totalItemsQty) * 100);
 
                     return (
-                      <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group">
-                        
-                        {/* Qty Badge on top of Bar */}
-                        <div className="bg-amber-100 text-amber-900 text-[11px] font-extrabold px-2 py-0.5 rounded-full mb-2 shadow-2xs border border-amber-200/70 group-hover:scale-110 transition-transform">
-                          {item.qty} Qty
+                      <div key={idx} className={`p-3.5 rounded-xl border flex items-center justify-between transition-all ${
+                        isDarkMode ? 'bg-slate-800/60 border-slate-700/60 hover:bg-slate-800' : 'bg-slate-50/80 border-slate-200/80 hover:bg-white shadow-2xs'
+                      }`}>
+                        <div className="flex items-center gap-3">
+                          <span className={`w-7 h-7 rounded-lg text-xs font-black flex items-center justify-center ${
+                            idx === 0 ? 'bg-amber-500 text-white' :
+                            idx === 1 ? 'bg-slate-400 text-white' :
+                            idx === 2 ? 'bg-amber-700 text-white' :
+                            isDarkMode ? 'bg-slate-700 text-slate-300' : 'bg-gray-200 text-gray-700'
+                          }`}>
+                            #{idx + 1}
+                          </span>
+                          <div>
+                            <span className={`font-bold text-sm block ${textHeadingClass}`}>{item.name}</span>
+                            <span className={`text-xs font-semibold ${textSubClass}`}>{pct}% of top POS item sales</span>
+                          </div>
                         </div>
-
-                        {/* Vertical Bar Column */}
-                        <div
-                          style={{ height: `${heightPct}%` }}
-                          className="w-full max-w-[52px] bg-gradient-to-t from-[#78350f] via-amber-600 to-amber-500 rounded-t-xl shadow-xs group-hover:from-amber-700 group-hover:to-orange-400 transition-all duration-300 relative overflow-hidden"
-                        >
-                          <div className="absolute top-0 inset-x-0 h-1.5 bg-amber-300/40"></div>
+                        <div className="text-right">
+                          <span className="text-sm font-extrabold text-amber-600 dark:text-amber-400 block">{item.qty} Qty Sold</span>
+                          <span className={`text-xs font-semibold ${textSubClass}`}>₹{(item.totalPrice || item.qty * 50).toLocaleString()}</span>
                         </div>
-
-                        {/* Product Name Label Under Bar */}
-                        <span className="text-xs font-bold text-gray-600 mt-3 group-hover:text-gray-900 truncate max-w-[80px] text-center transition-colors">
-                          {item.name}
-                        </span>
                       </div>
                     );
                   })}
                 </div>
+              )}
+            </div>
 
+            {topItemsListAll.length > 5 && (
+              <div className="pt-3 mt-4 border-t border-gray-100 dark:border-slate-800/80 text-center">
+                <button
+                  onClick={() => setShowAllPosItems(!showAllPosItems)}
+                  className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:text-amber-700 hover:underline inline-flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <span>{showAllPosItems ? 'Show Less' : `View More (${topItemsListAll.length - 5} more items)`}</span>
+                  {showAllPosItems ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
               </div>
             )}
           </div>
 
+          {/* List 2: Top Event Orders (Orders Sales) - Placed BELOW Top Selling Items & Shown ONLY if Orders Exist */}
+          {topOrdersListAll.length > 0 && (
+            <div className={`${cardBgClass} rounded-2xl p-6 border shadow-2xs flex flex-col justify-between`}>
+              <div>
+                <div className={`flex items-center justify-between mb-4 border-b pb-3 ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
+                  <div>
+                    <h3 className={`text-base font-bold tracking-tight ${textHeadingClass}`}>Top Event Orders (Orders Sales)</h3>
+                    <p className={`text-xs mt-0.5 ${textSubClass}`}>Ranked text breakdown of booked function catering orders ({timeRange})</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  {topOrdersList.map((order: any, idx: number) => (
+                    <div key={idx} className={`p-3.5 rounded-xl border flex items-center justify-between transition-all ${
+                      isDarkMode ? 'bg-slate-800/60 border-slate-700/60 hover:bg-slate-800' : 'bg-slate-50/80 border-slate-200/80 hover:bg-white shadow-2xs'
+                    }`}>
+                      <div className="flex items-center gap-3">
+                        <span className={`px-2.5 py-1 rounded-lg text-xs font-extrabold ${
+                          isDarkMode ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        }`}>
+                          {order.code || `#FN-0${idx + 1}`}
+                        </span>
+                        <div>
+                          <span className={`font-bold text-sm block ${textHeadingClass}`}>{order.name}</span>
+                          <span className={`text-xs font-semibold ${textSubClass}`}>Catering Function Package</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 block">₹{order.amount.toLocaleString()}</span>
+                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full inline-block mt-0.5 ${
+                          order.status === 'Completed' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                          order.status === 'Confirmed' ? 'bg-blue-100 text-blue-800 border border-blue-300' :
+                          'bg-amber-100 text-amber-800 border border-amber-300'
+                        }`}>
+                          {order.status || 'Pending'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {topOrdersListAll.length > 5 && (
+                <div className="pt-3 mt-4 border-t border-gray-100 dark:border-slate-800/80 text-center">
+                  <button
+                    onClick={() => setShowAllOrders(!showAllOrders)}
+                    className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 hover:underline inline-flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <span>{showAllOrders ? 'Show Less' : `View More (${topOrdersListAll.length - 5} more orders)`}</span>
+                    {showAllOrders ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Transactions Table Box with Multi-Filter Toolbar */}
-          <div className="bg-white rounded-2xl border border-gray-200/80 shadow-2xs overflow-hidden">
+          <div className={`${cardBgClass} rounded-2xl border shadow-2xs overflow-hidden`}>
             
             {/* Multi-Filter Toolbar Header */}
-            <div className="p-5 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className={`p-5 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
               <div>
-                <h3 className="text-base font-bold text-gray-900 tracking-tight">Recent Transactions ({timeRange})</h3>
-                <p className="text-xs text-gray-400 mt-0.5">Filter by Order ID, Payment Type, Date, or Status</p>
+                <h3 className={`text-base font-bold tracking-tight ${textHeadingClass}`}>Recent Transactions ({timeRange})</h3>
+                <p className={`text-xs mt-0.5 ${textSubClass}`}>Filter by Order ID, Payment Type, Date, or Status</p>
               </div>
 
               {/* Filter Controls Bar */}
@@ -394,7 +452,9 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
                     placeholder="Filter Order ID..."
                     value={orderIdSearch}
                     onChange={(e) => setOrderIdSearch(e.target.value)}
-                    className="pl-8 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:border-amber-500 w-36 font-medium text-gray-800 placeholder:text-gray-400"
+                    className={`pl-8 pr-3 py-1.5 border rounded-lg text-xs outline-none focus:border-amber-500 w-36 font-medium ${
+                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-gray-50 border-gray-200 text-gray-800 placeholder:text-gray-400'
+                    }`}
                   />
                 </div>
 
@@ -403,7 +463,9 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
                   <select
                     value={paymentFilter}
                     onChange={(e) => setPaymentFilter(e.target.value)}
-                    className="text-xs font-semibold bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-700 outline-none cursor-pointer focus:border-amber-500"
+                    className={`text-xs font-semibold border rounded-lg px-2.5 py-1.5 outline-none cursor-pointer focus:border-amber-500 ${
+                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-700'
+                    }`}
                   >
                     <option value="ALL">All Payments</option>
                     <option value="Cash">Cash</option>
@@ -417,7 +479,9 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
                   type="date"
                   value={filterDate}
                   onChange={(e) => setFilterDate(e.target.value)}
-                  className="text-xs font-semibold bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-700 outline-none cursor-pointer focus:border-amber-500"
+                  className={`text-xs font-semibold border rounded-lg px-2.5 py-1.5 outline-none cursor-pointer focus:border-amber-500 ${
+                    isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-700'
+                  }`}
                   title="Filter by specific date"
                 />
 
@@ -425,7 +489,9 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="text-xs font-semibold bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-700 outline-none cursor-pointer focus:border-amber-500"
+                  className={`text-xs font-semibold border rounded-lg px-2.5 py-1.5 outline-none cursor-pointer focus:border-amber-500 ${
+                    isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-700'
+                  }`}
                 >
                   <option value="ALL">All Status</option>
                   <option value="COMPLETED">Completed</option>
@@ -442,7 +508,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
                       setFilterDate('');
                       setStatusFilter('ALL');
                     }}
-                    className="text-xs font-bold text-rose-600 hover:text-rose-800 hover:underline px-1 py-1 cursor-pointer"
+                    className="text-xs font-bold text-rose-500 hover:text-rose-400 hover:underline px-1 py-1 cursor-pointer"
                   >
                     Clear Filters
                   </button>
@@ -454,13 +520,15 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
             {/* Transactions Table Body */}
             <div className="overflow-x-auto">
               {filteredTransactions.length === 0 ? (
-                <p className="text-xs text-gray-400 py-10 text-center font-medium">
+                <p className={`text-xs py-10 text-center font-medium ${textSubClass}`}>
                   No matching transactions found with current filters.
                 </p>
               ) : (
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50/50 border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                    <tr className={`border-b text-[11px] font-extrabold uppercase tracking-wider ${
+                      isDarkMode ? 'bg-slate-800/80 border-slate-800 text-white' : 'bg-slate-50/50 border-gray-100 text-gray-400'
+                    }`}>
                       <th className="py-4 px-5">ORDER ID</th>
                       <th className="py-4 px-4">DATE & TIME</th>
                       <th className="py-4 px-4">ITEMS SUMMARY</th>
@@ -469,30 +537,30 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
                       <th className="py-4 px-5 text-right">TOTAL</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 text-xs">
-                    {filteredTransactions.map((tx, idx) => (
-                      <tr key={idx} className="hover:bg-amber-50/30 transition-colors">
-                        <td className="py-4 px-5 font-bold text-gray-900">{tx.orderId}</td>
-                        <td className="py-4 px-4 font-medium text-gray-600">{tx.dateTime}</td>
-                        <td className="py-4 px-4 font-medium text-gray-700 max-w-xs truncate">{tx.itemsSummary}</td>
-                        <td className="py-4 px-4 font-semibold text-gray-700">
+                  <tbody className={`divide-y text-xs ${isDarkMode ? 'divide-slate-800' : 'divide-gray-100'}`}>
+                    {filteredTransactions.map((tx: any, idx: number) => (
+                      <tr key={idx} className={`transition-colors ${isDarkMode ? 'hover:bg-slate-800/60' : 'hover:bg-amber-50/30'}`}>
+                        <td className={`py-4 px-5 font-bold ${textHeadingClass}`}>{tx.orderId}</td>
+                        <td className={`py-4 px-4 font-medium ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>{tx.dateTime}</td>
+                        <td className={`py-4 px-4 font-medium max-w-xs truncate ${isDarkMode ? 'text-slate-200' : 'text-gray-700'}`}>{tx.itemsSummary}</td>
+                        <td className="py-4 px-4 font-semibold">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold ${
-                            tx.paymentType === 'Cash' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                            tx.paymentType === 'UPI' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
-                            'bg-blue-50 text-blue-700 border border-blue-200'
+                            tx.paymentType === 'Cash' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' :
+                            tx.paymentType === 'UPI' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40' :
+                            'bg-blue-500/20 text-blue-300 border border-blue-500/40'
                           }`}>
                             {tx.paymentType}
                           </span>
                         </td>
                         <td className="py-4 px-4">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
-                            tx.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' :
-                            tx.status === 'PENDING' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'
+                            tx.status === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-400' :
+                            tx.status === 'PENDING' ? 'bg-amber-500/20 text-amber-400' : 'bg-rose-500/20 text-rose-400'
                           }`}>
                             {tx.status}
                           </span>
                         </td>
-                        <td className="py-4 px-5 text-right font-extrabold text-gray-900">{tx.total}</td>
+                        <td className={`py-4 px-5 text-right font-extrabold ${textHeadingClass}`}>{tx.total}</td>
                       </tr>
                     ))}
                   </tbody>

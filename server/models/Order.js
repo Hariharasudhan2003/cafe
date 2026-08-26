@@ -8,7 +8,7 @@ const orderSchema = new mongoose.Schema(
     eventDate: { type: String, required: true },
     items: { type: String, required: true },
     amount: { type: Number, required: true },
-    status: { type: String, enum: ['Pending', 'Completed', 'Cancelled'], default: 'Pending' },
+    status: { type: String, enum: ['Pending', 'Confirmed', 'Completed', 'Cancelled'], default: 'Pending' },
     advanceReceived: { type: Number, default: 0 },
     balanceDue: { type: Number, default: 0 },
     contactNumber: { type: String, default: '' },

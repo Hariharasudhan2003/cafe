@@ -22,6 +22,10 @@ function App() {
   });
 
   useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDarkMode);
+  }, [isDarkMode]);
+
+  useEffect(() => {
     apiGetSettings()
       .then((data) => {
         if (data) {
@@ -58,7 +62,17 @@ function App() {
       case 'Reports':
         return <ReportsPage onNavigate={(tab) => setCurrentTab(tab)} isDarkMode={isDarkMode} />;
       case 'Orders':
-        return <OrdersPage onNavigate={(tab) => setCurrentTab(tab)} isDarkMode={isDarkMode} />;
+        return (
+          <OrdersPage 
+            onNavigate={(tab) => setCurrentTab(tab)} 
+            isDarkMode={isDarkMode}
+            cafeName={globalSettings.cafeName}
+            branchLocation={globalSettings.branchLocation}
+            logoUrl={globalSettings.logoUrl}
+            globalGst={globalSettings.globalGst}
+            taxInclusive={globalSettings.taxInclusive}
+          />
+        );
       case 'Settings':
         return (
           <SettingsPage 

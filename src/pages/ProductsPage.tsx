@@ -5,7 +5,6 @@ import {
   Edit3, 
   Trash2, 
   X, 
-  Settings, 
   ChevronLeft, 
   ChevronRight,
   CheckCircle2
@@ -13,7 +12,7 @@ import {
 import { Sidebar } from '../components/Sidebar';
 import { Navbar } from '../components/Navbar';
 import { AddNewProductPage } from './AddNewProductPage';
-import { apiGetProducts, apiDeleteProduct, apiGetSettings, apiUpdateProduct } from '../services/api';
+import { apiGetProducts, apiDeleteProduct, apiGetSettings, apiUpdateProduct, apiCreateProduct } from '../services/api';
 
 export interface ProductItem {
   id: string;
@@ -54,16 +53,19 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
     apiGetProducts()
       .then((data) => {
         if (Array.isArray(data)) {
-          const formatted: ProductItem[] = data.map((p: any) => ({
-            id: p._id || p.code || p.id,
-            code: p.code || `#PRD-0${Math.floor(Math.random() * 90 + 10)}`,
-            name: p.name,
-            category: p.category || 'Snacks',
-            price: p.price,
-            gst: p.gst !== undefined ? p.gst : globalGst,
-            status: p.status || 'Active',
-            image: p.image || ''
-          }));
+          const formatted: ProductItem[] = data.map((p: any, idx: number) => {
+            const seqCode = `#PRD-${String(idx + 1).padStart(3, '0')}`;
+            return {
+              id: p._id || p.code || p.id,
+              code: p.code && p.code.startsWith('#PRD-') ? p.code : seqCode,
+              name: p.name,
+              category: p.category || 'Snacks',
+              price: p.price,
+              gst: p.gst !== undefined ? p.gst : globalGst,
+              status: p.status || 'Active',
+              image: p.image || ''
+            };
+          });
           setProducts(formatted);
         }
       })
@@ -106,14 +108,6 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
     }
   };
 
-  // Inline Category change handler
-  const handleCategoryChange = async (id: string, newCategory: ProductItem['category']) => {
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, category: newCategory } : p));
-    try {
-      await apiUpdateProduct(id, { category: newCategory });
-    } catch (e) {}
-    showToast('Category updated!');
-  };
 
   // Inline Status change handler
   const handleStatusChange = async (id: string, newStatus: ProductItem['status']) => {
@@ -271,22 +265,16 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
         )}
 
         {/* Content Body */}
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">
+        <main className="flex-1 overflow-y-auto scrollbar-none p-6 space-y-6">
           
           {/* Header Action Bar */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Product Management</h1>
-              <p className="text-sm text-gray-500 mt-0.5">Manage your cafe's menu items, pricing, and stock.</p>
+              <h1 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Product Management</h1>
+              <p className={`text-sm mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Manage your cafe's menu items, pricing, and stock.</p>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              {/* GST Managed Centrally Pill */}
-              <div className="bg-slate-100/90 text-slate-700 border border-slate-200 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-2xs">
-                <Settings className="w-3.5 h-3.5 text-slate-500" />
-                <span>GST Managed Centrally</span>
-              </div>
-
               {/* Search Bar */}
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -295,14 +283,16 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
                   placeholder="Search products..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:border-amber-500 shadow-2xs w-60"
+                  className={`pl-9 pr-4 py-2 rounded-xl text-sm outline-none focus:border-amber-500 shadow-2xs w-60 border ${
+                    isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-white border-gray-200 text-gray-800'
+                  }`}
                 />
               </div>
 
               {/* Add New Product Button */}
               <button
                 onClick={() => setIsAddMode(true)}
-                className="bg-[#f97316] hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 shadow-sm transition-all active:scale-[0.98]"
+                className="bg-[#f97316] hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 shadow-sm transition-all active:scale-[0.98] cursor-pointer"
               >
                 <Plus className="w-4 h-4 stroke-[2.5]" />
                 <span>Add New Product</span>
@@ -311,12 +301,16 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
           </div>
 
           {/* Product Data Table Container */}
-          <div className="bg-white rounded-2xl border border-gray-200/80 shadow-2xs overflow-hidden flex flex-col justify-between">
+          <div className={`rounded-2xl border shadow-2xs overflow-hidden flex flex-col justify-between ${
+            isDarkMode ? 'bg-[#1e293b] border-slate-800 text-white' : 'bg-white border-gray-200/80 text-gray-900'
+          }`}>
             
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/60 border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                  <tr className={`border-b text-[11px] font-extrabold uppercase tracking-wider ${
+                    isDarkMode ? 'bg-slate-800/80 border-slate-800 text-white' : 'bg-slate-50/60 border-gray-100 text-gray-400'
+                  }`}>
                     <th className="py-4 px-5">PRODUCT ID</th>
                     <th className="py-4 px-4">IMAGE</th>
                     <th className="py-4 px-4">NAME</th>
@@ -327,10 +321,10 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
                     <th className="py-4 px-5 text-right">ACTIONS</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 text-xs">
+                <tbody className={`divide-y text-xs ${isDarkMode ? 'divide-slate-800' : 'divide-gray-100'}`}>
                   {filteredProducts.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-8 text-center text-gray-400 font-medium">
+                      <td colSpan={8} className={`py-8 text-center font-medium ${isDarkMode ? 'text-slate-300' : 'text-gray-400'}`}>
                         No products found. Click "Add New Product" to create one.
                       </td>
                     </tr>
@@ -341,18 +335,22 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
                       return (
                         <tr 
                           key={product.id} 
-                          className={`hover:bg-amber-50/30 transition-colors ${
-                            isInactive ? 'opacity-60 bg-gray-50/30' : ''
+                          className={`transition-colors ${
+                            isInactive 
+                              ? (isDarkMode ? 'opacity-50 bg-slate-900/40' : 'opacity-60 bg-gray-50/30') 
+                              : (isDarkMode ? 'hover:bg-slate-800/60' : 'hover:bg-amber-50/30')
                           }`}
                         >
                           {/* PRODUCT ID */}
-                          <td className="py-4 px-5 font-semibold text-gray-500">
+                          <td className={`py-4 px-5 font-semibold ${isDarkMode ? 'text-slate-200' : 'text-gray-500'}`}>
                             {product.code}
                           </td>
 
                           {/* IMAGE */}
                           <td className="py-4 px-4">
-                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 border border-gray-200 shrink-0 flex items-center justify-center">
+                            <div className={`w-10 h-10 rounded-lg overflow-hidden border shrink-0 flex items-center justify-center ${
+                              isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-gray-200'
+                            }`}>
                               {product.image ? (
                                 <img 
                                   src={product.image} 
@@ -360,28 +358,28 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
                                   className="w-full h-full object-cover" 
                                 />
                               ) : (
-                                <span className="text-[10px] font-bold text-gray-400">NO IMG</span>
+                                <span className={`text-[10px] font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>NO IMG</span>
                               )}
                             </div>
                           </td>
 
                           {/* NAME */}
-                          <td className="py-4 px-4 font-bold text-gray-900 text-sm">
+                          <td className={`py-4 px-4 font-bold text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                             {product.name}
                           </td>
 
                           {/* CATEGORY */}
-                          <td className="py-4 px-4 font-medium text-gray-600">
+                          <td className={`py-4 px-4 font-medium ${isDarkMode ? 'text-slate-200' : 'text-gray-600'}`}>
                             {product.category}
                           </td>
 
                           {/* SELLING PRICE */}
-                          <td className="py-4 px-4 text-center font-extrabold text-gray-900 text-sm">
+                          <td className={`py-4 px-4 text-center font-extrabold text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                             ₹{product.price.toFixed(2)}
                           </td>
 
                           {/* GST (%) */}
-                          <td className="py-4 px-4 text-center font-medium text-gray-600">
+                          <td className={`py-4 px-4 text-center font-medium ${isDarkMode ? 'text-slate-200' : 'text-gray-600'}`}>
                             {product.gst}%
                           </td>
 
@@ -405,14 +403,18 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
                             <div className="flex items-center justify-end gap-2">
                               <button
                                 onClick={() => openEditModal(product)}
-                                className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
+                                className={`p-1.5 rounded-lg transition ${
+                                  isDarkMode ? 'text-slate-300 hover:text-white hover:bg-slate-800' : 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'
+                                }`}
                                 title="Edit Product"
                               >
                                 <Edit3 className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleDeleteProduct(product.id, product.name)}
-                                className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                                className={`p-1.5 rounded-lg transition ${
+                                  isDarkMode ? 'text-slate-300 hover:text-rose-400 hover:bg-slate-800' : 'text-gray-400 hover:text-rose-600 hover:bg-rose-50'
+                                }`}
                                 title="Delete Product"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -428,15 +430,19 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
             </div>
 
             {/* Footer Pagination Bar */}
-            <div className="p-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-gray-500">
+            <div className={`p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium ${
+              isDarkMode ? 'border-slate-800 text-slate-300' : 'border-gray-100 text-gray-500'
+            }`}>
               <div>
-                Showing 1 to {filteredProducts.length} of 48 entries
+                Showing {filteredProducts.length > 0 ? 1 : 0} to {filteredProducts.length} of {products.length} entries
               </div>
 
               <div className="flex items-center gap-1.5">
                 <button 
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-400 disabled:opacity-40"
+                  className={`p-1.5 rounded-lg border disabled:opacity-40 ${
+                    isDarkMode ? 'border-slate-700 hover:bg-slate-800 text-slate-300' : 'border-gray-200 hover:bg-gray-50 text-gray-400'
+                  }`}
                   disabled={currentPage === 1}
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -448,8 +454,8 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
                     onClick={() => setCurrentPage(page)}
                     className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${
                       currentPage === page
-                        ? 'bg-amber-100/90 text-amber-800 border border-amber-300 shadow-2xs'
-                        : 'text-gray-600 hover:bg-gray-100'
+                        ? 'bg-amber-500 text-white shadow-2xs font-extrabold'
+                        : isDarkMode ? 'text-slate-300 hover:bg-slate-800' : 'text-gray-600 hover:bg-gray-100'
                     }`}
                   >
                     {page}
@@ -460,7 +466,9 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
 
                 <button 
                   onClick={() => setCurrentPage(p => p + 1)}
-                  className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-600"
+                  className={`p-1.5 rounded-lg border ${
+                    isDarkMode ? 'border-slate-700 hover:bg-slate-800 text-slate-300' : 'border-gray-200 hover:bg-gray-50 text-gray-600'
+                  }`}
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -474,22 +482,26 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
 
       {/* Add / Edit Product Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 border border-gray-100 relative">
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className={`rounded-2xl shadow-2xl w-full max-w-md p-6 border relative ${
+            isDarkMode ? 'bg-[#1e293b] text-white border-slate-800' : 'bg-white text-gray-900 border-gray-100'
+          }`}>
             <button
               onClick={() => setIsAddModalOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition"
+              className={`absolute top-4 right-4 p-1 rounded-full transition ${
+                isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+              }`}
             >
               <X className="w-5 h-5" />
             </button>
 
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
+            <h3 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
               {editingProduct ? 'Edit Product' : 'Add New Product'}
             </h3>
 
             <form onSubmit={handleSaveProduct} className="flex flex-col gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">
+                <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
                   Product Name
                 </label>
                 <input
@@ -498,30 +510,35 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
                   placeholder="e.g. Ginger Tea"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:border-amber-500 outline-none"
+                  className={`w-full border rounded-xl px-3.5 py-2.5 text-sm outline-none ${
+                    isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-amber-500' : 'bg-white border-gray-200 text-gray-800 focus:border-amber-500'
+                  }`}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                  <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
                     Category
                   </label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
-                    className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:border-amber-500 outline-none bg-white"
+                    className={`w-full border rounded-xl px-3.5 py-2.5 text-sm outline-none ${
+                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-200 text-gray-800'
+                    }`}
                   >
-                    <option value="Beverage">Beverage</option>
+                    <option value="Beverages">Beverages</option>
+                    <option value="Juices">Juices</option>
+                    <option value="Cool Drinks">Cool Drinks</option>
                     <option value="Snacks">Snacks</option>
                     <option value="Fast Food">Fast Food</option>
-                    <option value="Juices">Juices</option>
                     <option value="Desserts">Desserts</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                  <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
                     Selling Price (₹)
                   </label>
                   <input
@@ -531,20 +548,24 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
                     placeholder="40.00"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:border-amber-500 outline-none"
+                    className={`w-full border rounded-xl px-3.5 py-2.5 text-sm outline-none ${
+                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-amber-500' : 'bg-white border-gray-200 text-gray-800 focus:border-amber-500'
+                    }`}
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                  <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
                     GST (%)
                   </label>
                   <select
                     value={formData.gst}
                     onChange={(e) => setFormData({ ...formData, gst: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:border-amber-500 outline-none bg-white"
+                    className={`w-full border rounded-xl px-3.5 py-2.5 text-sm outline-none ${
+                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-200 text-gray-800'
+                    }`}
                   >
                     <option value="5">5%</option>
                     <option value="12">12%</option>
@@ -553,13 +574,15 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                  <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
                     Status
                   </label>
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                    className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:border-amber-500 outline-none bg-white"
+                    className={`w-full border rounded-xl px-3.5 py-2.5 text-sm outline-none ${
+                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-200 text-gray-800'
+                    }`}
                   >
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
@@ -568,7 +591,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">
+                <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
                   Image URL (Optional)
                 </label>
                 <input
@@ -576,7 +599,9 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
                   placeholder="https://images.unsplash.com/..."
                   value={formData.image}
                   onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:border-amber-500 outline-none"
+                  className={`w-full border rounded-xl px-3.5 py-2.5 text-sm outline-none ${
+                    isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-amber-500' : 'bg-white border-gray-200 text-gray-800 focus:border-amber-500'
+                  }`}
                 />
               </div>
 
@@ -584,13 +609,15 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-xl text-sm"
+                  className={`flex-1 font-semibold py-2.5 rounded-xl text-sm transition ${
+                    isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  }`}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-[#f97316] hover:bg-orange-600 text-white font-semibold py-2.5 rounded-xl text-sm shadow-md"
+                  className="flex-1 bg-[#f97316] hover:bg-orange-600 text-white font-semibold py-2.5 rounded-xl text-sm shadow-md transition"
                 >
                   {editingProduct ? 'Update Product' : 'Save Product'}
                 </button>

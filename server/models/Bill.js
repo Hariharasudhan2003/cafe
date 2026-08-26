@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const billSchema = new mongoose.Schema(
   {
-    billNo: { type: String, required: true, unique: true },
+    billNo: { type: String, required: true },
     customerName: { type: String, default: 'Walk-in Customer' },
     date: { type: String, required: true },
     time: { type: String, required: true },

@@ -32,6 +32,8 @@ interface BookNewOrderPageProps {
   onConfirmBooking?: (booking: any) => void;
   isDarkMode?: boolean;
   initialOrderData?: any;
+  globalGst?: number;
+  taxInclusive?: boolean;
 }
 
 function parseItemsStringToObjects(itemsStr?: string): OrderItem[] {
@@ -61,31 +63,27 @@ function parseItemsStringToObjects(itemsStr?: string): OrderItem[] {
   });
 }
 
-const defaultMenu = [
-  { name: 'Veg Puff', price: 20 },
-  { name: 'Paneer Puff', price: 35 },
-  { name: 'Masala Tea', price: 15 },
-  { name: 'Cold Coffee', price: 80 },
-  { name: 'Margherita Pizza', price: 90 },
-  { name: 'Iced Lemon Soda', price: 45 },
-  { name: 'Chicken Burger', price: 120 },
-  { name: 'Glazed Donut', price: 45 },
-  { name: 'Cappuccino', price: 110 }
-];
-
 export const BookNewOrderPage: React.FC<BookNewOrderPageProps> = ({ 
   onNavigate, 
   onBack,
   onConfirmBooking,
   isDarkMode = false,
-  initialOrderData = null
+  initialOrderData = null,
+  globalGst: propGlobalGst,
+  taxInclusive: propTaxInclusive
 }) => {
   const [activeTab, setActiveTab] = useState<string>('Orders');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Live Menu Products State
-  const [availableProducts, setAvailableProducts] = useState<{ name: string; price: number }[]>(defaultMenu);
-  const [cafeSettings, setCafeSettings] = useState({ cafeName: 'BrewMaster', branchLocation: 'Downtown Branch', logoUrl: '' });
+  // Live Menu Products State (Starts Empty, Fetches from Database)
+  const [availableProducts, setAvailableProducts] = useState<{ name: string; price: number }[]>([]);
+  const [cafeSettings, setCafeSettings] = useState({ 
+    cafeName: 'BrewMaster', 
+    branchLocation: 'Downtown Branch', 
+    logoUrl: '',
+    globalGst: propGlobalGst !== undefined ? propGlobalGst : 18,
+    taxInclusive: propTaxInclusive !== undefined ? propTaxInclusive : true
+  });
 
   // Form State: Event Details (Initial 100% Blank for Manual Entry)
   const [eventName, setEventName] = useState<string>('');
@@ -379,8 +377,12 @@ export const BookNewOrderPage: React.FC<BookNewOrderPageProps> = ({
   };
 
   // Payment Calculations
+  const isTaxEnabled = (propTaxInclusive !== undefined ? propTaxInclusive : cafeSettings.taxInclusive !== false) && ((propGlobalGst !== undefined ? propGlobalGst : (cafeSettings.globalGst ?? 18)) > 0);
+  const totalGstPercentage = isTaxEnabled ? (propGlobalGst !== undefined ? propGlobalGst : (cafeSettings.globalGst ?? 18)) : 0;
+
   const subtotal = orderItems.reduce((sum, item) => sum + item.total, 0);
-  const totalAmount = subtotal;
+  const gstAmount = isTaxEnabled ? Math.round(subtotal * (totalGstPercentage / 100)) : 0;
+  const totalAmount = subtotal + gstAmount;
   const advanceNum = parseFloat(advanceReceived) || 0;
   const balanceDue = Math.max(0, totalAmount - advanceNum);
 
@@ -392,12 +394,11 @@ export const BookNewOrderPage: React.FC<BookNewOrderPageProps> = ({
     }
 
     const isEditMode = Boolean(initialOrderData && (initialOrderData.id || initialOrderData._id));
-    const orderId = initialOrderData?.id || initialOrderData?._id || Date.now().toString();
-    const orderCode = initialOrderData?.code || `#FN-0${Math.floor(Math.random() * 90 + 10)}`;
+    const orderId = initialOrderData?.id || initialOrderData?._id;
+    const seqNum = Math.floor((Date.now() / 1000) % 900) + 100;
+    const orderCode = initialOrderData?.code || `#FN-${String(seqNum).padStart(3, '0')}`;
 
-    const payload = {
-      id: orderId,
-      _id: orderId,
+    const payload: any = {
       code: orderCode,
       customer: customerName || eventName || 'Function Booking',
       subDetail: eventName || '-',
@@ -417,14 +418,16 @@ export const BookNewOrderPage: React.FC<BookNewOrderPageProps> = ({
 
     try {
       let saved;
-      if (isEditMode) {
-        saved = await apiUpdateOrder(orderId, payload);
+      if (isEditMode && orderId) {
+        saved = await apiUpdateOrder(orderId, { ...payload, id: orderId, _id: orderId });
       } else {
         saved = await apiCreateOrder(payload);
       }
-      if (onConfirmBooking) onConfirmBooking(saved || payload);
-    } catch {
-      if (onConfirmBooking) onConfirmBooking(payload);
+      const finalSavedOrder = saved || { ...payload, id: Date.now().toString(), _id: Date.now().toString() };
+      if (onConfirmBooking) onConfirmBooking(finalSavedOrder);
+    } catch (err) {
+      console.error('API Order Save Error:', err);
+      if (onConfirmBooking) onConfirmBooking({ ...payload, id: orderId || Date.now().toString(), _id: orderId || Date.now().toString() });
     }
 
     clearDraft();
@@ -820,8 +823,20 @@ export const BookNewOrderPage: React.FC<BookNewOrderPageProps> = ({
                   </div>
 
                   <div className="flex justify-between items-center">
-                    <span className={isDarkMode ? 'text-slate-400' : 'text-gray-500'}>Order Gross Total</span>
+                    <span className={isDarkMode ? 'text-slate-400' : 'text-gray-500'}>Subtotal</span>
                     <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>₹{subtotal.toFixed(2)}</span>
+                  </div>
+
+                  {isTaxEnabled && (
+                    <div className="flex justify-between items-center text-gray-500">
+                      <span>GST ({totalGstPercentage}%)</span>
+                      <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>+ ₹{gstAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center">
+                    <span className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-gray-700'}`}>Order Total</span>
+                    <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>₹{totalAmount.toFixed(2)}</span>
                   </div>
 
                   <div className="flex justify-between items-center text-emerald-600 font-semibold">

@@ -16,8 +16,9 @@ import {
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { Navbar } from '../components/Navbar';
+import { ReceiptModal, type ReceiptData } from '../components/ReceiptModal';
 import type { Product, CartItem } from '../types/pos';
-import { apiGetProducts, apiCreateProduct, apiCreateBill, apiGetBills, apiGetSettings } from '../services/api';
+import { apiGetProducts, apiCreateProduct, apiCreateBill, apiGetBills, apiGetSettings, apiDeleteBill } from '../services/api';
 
 export interface HeldBill {
   id: string;
@@ -30,7 +31,7 @@ export interface HeldBill {
   grandTotal: number;
 }
 
-const categories = ['All', 'Tea', 'Coffee', 'Juice', 'Cool Drinks', 'Snacks'] as const;
+const categories = ['All', 'Beverage', 'Snacks', 'Juice', 'Desserts'] as const;
 
 interface POSPageProps {
   onNavigate?: (tab: string) => void;
@@ -59,6 +60,9 @@ export const POSPage: React.FC<POSPageProps> = ({
   const [customerName, setCustomerName] = useState<string>('Walk-in Customer');
   const [activeSidebarTab, setActiveSidebarTab] = useState<string>('POS Billing');
   const [activeNavbarView, setActiveNavbarView] = useState<string>('POS');
+  
+  // Receipt Thermal Print Modal State
+  const [activeReceipt, setActiveReceipt] = useState<ReceiptData | null>(null);
   
   // Modal State
   const [isAddItemOpen, setIsAddItemOpen] = useState<boolean>(false);
@@ -167,15 +171,30 @@ export const POSPage: React.FC<POSPageProps> = ({
     apiGetProducts()
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
-          const formatted: Product[] = data.map((p: any) => ({
-            id: p._id || p.code || `p_${Date.now()}`,
-            name: p.name,
-            category: p.category,
-            price: p.price,
-            stock: p.stock || 'infinity',
-            status: p.status || 'Active',
-            image: p.image || 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=500&q=80'
-          }));
+          const formatted: Product[] = data.map((p: any) => {
+            const nameLower = (p.name || '').toLowerCase();
+            const catLower = (p.category || '').toLowerCase();
+            let resolvedCat = p.category;
+            if (catLower.includes('beverage') || catLower.includes('tea') || catLower.includes('coffee') ||
+                nameLower.includes('tea') || nameLower.includes('coffee') || nameLower.includes('chai') || nameLower.includes('latte') || nameLower.includes('espresso')) {
+              resolvedCat = 'Beverage';
+            } else if (catLower.includes('juice') || nameLower.includes('juice')) {
+              resolvedCat = 'Juice';
+            } else if (catLower.includes('dessert') || catLower.includes('cake') || nameLower.includes('cake') || nameLower.includes('ice cream')) {
+              resolvedCat = 'Desserts';
+            } else if (catLower.includes('snack') || catLower.includes('fast food') || nameLower.includes('puff') || nameLower.includes('samosa') || nameLower.includes('burger') || nameLower.includes('pizza') || nameLower.includes('sandwich')) {
+              resolvedCat = 'Snacks';
+            }
+            return {
+              id: p._id || p.code || `p_${Date.now()}`,
+              name: p.name,
+              category: resolvedCat,
+              price: p.price,
+              stock: p.stock || 'infinity',
+              status: p.status || 'Active',
+              image: p.image || 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=500&q=80'
+            };
+          });
           setProducts(formatted);
         }
       })
@@ -184,7 +203,21 @@ export const POSPage: React.FC<POSPageProps> = ({
     apiGetBills()
       .then((data) => {
         if (Array.isArray(data)) {
-          setBillSeqNumber(data.length + 1);
+          let maxSeq = 0;
+          data.forEach((b: any) => {
+            if (b.billNo) {
+              const matches = b.billNo.match(/\d+/g);
+              if (matches && matches.length > 0) {
+                const num = parseInt(matches[matches.length - 1], 10);
+                if (!isNaN(num) && num > maxSeq) {
+                  maxSeq = num;
+                }
+              }
+            }
+          });
+          const nextSeq = Math.max(maxSeq + 1, data.length + 1);
+          setBillSeqNumber(nextSeq);
+
           const held = data.filter((b: any) => b.status === 'Held').map((b: any) => ({
             id: b._id || b.billNo,
             billNo: b.billNo,
@@ -274,13 +307,41 @@ export const POSPage: React.FC<POSPageProps> = ({
       status: 'Paid'
     };
 
+    let finalBillNo = currentBillNo;
+
     try {
-      await apiCreateBill(billPayload);
+      const created = await apiCreateBill(billPayload);
+      if (created && created.billNo) {
+        finalBillNo = created.billNo;
+      }
     } catch (e) {
-      console.warn('Bill saved locally:', e);
+      console.warn('Bill saved locally fallback:', e);
     }
 
-    showNotification(`Payment of ₹${grandTotal} completed for ${currentBillNo} via ${paymentMethod}!`);
+    // Trigger 1-click Thermal Receipt Print Modal
+    setActiveReceipt({
+      billNo: finalBillNo,
+      date: dateFormatted,
+      time: timeFormatted,
+      customerName: customerName || 'Walk-in Customer',
+      servedBy: `Alex M. (${paymentMethod})`,
+      items: cart.map((item) => ({
+        name: item.product.name,
+        quantity: item.quantity,
+        price: item.product.price
+      })),
+      subtotal,
+      gstRate: totalGstPercentage,
+      cgst,
+      sgst,
+      grandTotal,
+      paymentMethod: paymentMethod,
+      cafeName: cafeSettings.cafeName,
+      branchLocation: cafeSettings.branchLocation,
+      logoUrl: cafeSettings.logoUrl
+    });
+
+    showNotification(`Payment of ₹${grandTotal} completed for ${finalBillNo} via ${paymentMethod}!`);
     setCart([]);
     setCustomerName('Walk-in Customer');
     setBillSeqNumber(prev => prev + 1); // Automatically increment to next order-wise unique bill number!
@@ -296,19 +357,10 @@ export const POSPage: React.FC<POSPageProps> = ({
     const dateFormatted = now.toISOString().split('T')[0];
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    const newHeldBill: HeldBill = {
-      id: `hb_${Date.now()}`,
-      billNo: currentBillNo,
-      customerName: customerName || 'Walk-in Customer',
-      date: dateFormatted,
-      time: timeStr,
-      items: [...cart],
-      subtotal: subtotal,
-      grandTotal: grandTotal
-    };
+    let createdId = `hb_${Date.now()}`;
 
     try {
-      await apiCreateBill({
+      const created = await apiCreateBill({
         billNo: currentBillNo,
         customerName: customerName || 'Walk-in Customer',
         date: dateFormatted,
@@ -318,9 +370,23 @@ export const POSPage: React.FC<POSPageProps> = ({
         grandTotal,
         status: 'Held'
       });
+      if (created && (created._id || created.id)) {
+        createdId = created._id || created.id;
+      }
     } catch (e) {
       console.warn('Held bill stored locally:', e);
     }
+
+    const newHeldBill: HeldBill = {
+      id: createdId,
+      billNo: currentBillNo,
+      customerName: customerName || 'Walk-in Customer',
+      date: dateFormatted,
+      time: timeStr,
+      items: [...cart],
+      subtotal: subtotal,
+      grandTotal: grandTotal
+    };
 
     setHeldBills([newHeldBill, ...heldBills]);
     setCart([]);
@@ -329,23 +395,52 @@ export const POSPage: React.FC<POSPageProps> = ({
     setBillSeqNumber(prev => prev + 1); // Increment bill number!
   };
 
-  const handleResumeHeldBill = (heldBill: HeldBill) => {
+  const handleResumeHeldBill = async (heldBill: HeldBill) => {
     setCart(heldBill.items);
     setCustomerName(heldBill.customerName);
     setHeldBills(prev => prev.filter(b => b.id !== heldBill.id));
     setIsHeldBillsOpen(false);
     showNotification(`Resumed ${heldBill.billNo} to active bill panel!`);
+
+    try {
+      await apiDeleteBill(heldBill.id);
+    } catch (e) {
+      console.warn('Failed to delete resumed held bill from API:', e);
+    }
   };
 
-  const handleDiscardHeldBill = (id: string, billNo: string) => {
+  const handleDiscardHeldBill = async (id: string, billNo: string) => {
     setHeldBills(prev => prev.filter(b => b.id !== id));
     showNotification(`Discarded held bill ${billNo}.`);
+
+    try {
+      await apiDeleteBill(id);
+    } catch (e) {
+      console.warn('Failed to delete discarded held bill from API:', e);
+    }
   };
 
   // Filtered Products (Active products only)
   const filteredProducts = products.filter((p) => {
     const isActive = p.status === undefined || p.status === 'Active' || (p.status as string) === 'active';
-    const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
+    const catLower = (p.category || '').toLowerCase();
+    const nameLower = (p.name || '').toLowerCase();
+
+    let matchesCategory = selectedCategory === 'All';
+    if (!matchesCategory) {
+      if (selectedCategory === 'Beverage') {
+        matchesCategory = (p.category as string) === 'Beverage' || catLower.includes('beverage') || catLower.includes('tea') || catLower.includes('coffee') || nameLower.includes('tea') || nameLower.includes('coffee');
+      } else if (selectedCategory === 'Juice') {
+        matchesCategory = p.category === 'Juice' || catLower.includes('juice') || nameLower.includes('juice');
+      } else if (selectedCategory === 'Desserts') {
+        matchesCategory = (p.category as string) === 'Desserts' || catLower.includes('dessert') || nameLower.includes('cake') || nameLower.includes('ice cream');
+      } else if (selectedCategory === 'Snacks') {
+        matchesCategory = p.category === 'Snacks' || catLower.includes('snack') || catLower.includes('fast food') || nameLower.includes('puff') || nameLower.includes('samosa') || nameLower.includes('burger') || nameLower.includes('pizza');
+      } else {
+        matchesCategory = p.category === selectedCategory;
+      }
+    }
+
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
     return isActive && matchesCategory && matchesSearch;
   });
@@ -631,7 +726,7 @@ export const POSPage: React.FC<POSPageProps> = ({
                   <span className="font-bold text-gray-900 text-xs">₹{subtotal}</span>
                 </div>
 
-                {isTaxEnabled ? (
+                {isTaxEnabled && (
                   <>
                     <div className="flex justify-between items-center text-gray-400 text-[10px]">
                       <span>CGST ({halfGstRate}%)</span>
@@ -643,11 +738,6 @@ export const POSPage: React.FC<POSPageProps> = ({
                       <span>₹{sgst}</span>
                     </div>
                   </>
-                ) : (
-                  <div className="flex justify-between items-center text-gray-400 text-[10px]">
-                    <span>GST (Tax Disabled)</span>
-                    <span>₹0</span>
-                  </div>
                 )}
               </div>
 
@@ -896,6 +986,13 @@ export const POSPage: React.FC<POSPageProps> = ({
           </div>
         </div>
       )}
+
+      {/* Thermal Receipt Print Modal */}
+      <ReceiptModal 
+        receipt={activeReceipt} 
+        onClose={() => setActiveReceipt(null)} 
+        autoPrint={true} 
+      />
 
     </div>
   );

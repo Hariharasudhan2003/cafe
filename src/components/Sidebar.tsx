@@ -36,8 +36,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { name: 'Settings', icon: Settings },
   ];
 
-  const defaultAvatar = "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80";
-
   return (
     <aside className="w-64 bg-[#232936] text-gray-300 flex flex-col justify-between h-screen sticky top-0 select-none shadow-xl border-r border-slate-700/50 shrink-0">
       {/* Top Header & Navigation */}

@@ -211,7 +211,7 @@ const sampleBills = [
     sgst: 4,
     grandTotal: 168,
     paymentMethod: 'Cash',
-    status: 'Held'
+    status: 'Paid'
   },
   {
     billNo: '#B-1045',

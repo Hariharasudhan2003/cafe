@@ -95,6 +95,12 @@ export const apiUpdateBillStatus = (id: string, status: string) => {
   });
 };
 
+export const apiDeleteBill = (id: string) => {
+  return apiFetch<any>(`/bills/${id}`, {
+    method: 'DELETE',
+  });
+};
+
 // ---------------- DASHBOARD & SETTINGS ----------------
 export const apiGetDashboardStats = () => {
   return apiFetch<any>('/dashboard/stats');

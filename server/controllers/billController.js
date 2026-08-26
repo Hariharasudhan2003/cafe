@@ -24,12 +24,17 @@ export const getBills = async (req, res) => {
 
 export const createBill = async (req, res) => {
   try {
-    const count = await Bill.countDocuments();
-    const billNo = req.body.billNo || `#B-${(count + 1048).toString()}`;
+    let billNo = req.body.billNo;
+    if (!billNo) {
+      const count = await Bill.countDocuments();
+      billNo = `#BILL-${String(count + 1001).padStart(4, '0')}`;
+    }
+
     const newBill = new Bill({ ...req.body, billNo });
     const saved = await newBill.save();
     res.status(201).json(saved);
   } catch (error) {
+    console.error('Error in createBill:', error);
     res.status(400).json({ message: error.message });
   }
 };

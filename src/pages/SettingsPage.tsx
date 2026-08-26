@@ -168,7 +168,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         )}
 
         {/* Scrollable Main Content */}
-        <main className="flex-1 overflow-y-auto p-6 space-y-6 max-w-5xl">
+        <main className="flex-1 overflow-y-auto scrollbar-none p-6 space-y-6 w-full">
           
           {/* Header */}
           <div>

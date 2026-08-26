@@ -31,13 +31,12 @@ interface DashboardPageProps {
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDarkMode = false }) => {
   const [activeTab, setActiveTab] = useState<string>('Dashboard');
-  const [timeFilter, setTimeFilter] = useState<'Today' | 'Week' | 'Month'>('Today');
+  const [timeFilter, setTimeFilter] = useState<'Today' | 'Week' | 'Month' | 'All'>('Today');
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
   const [showAllBills, setShowAllBills] = useState<boolean>(false);
   const [bills, setBills] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [productsCount, setProductsCount] = useState<number>(0);
-  const [topItems, setTopItems] = useState<{ name: string; category: string; qty: number; revenue: string }[]>([]);
   const [cafeSettings, setCafeSettings] = useState({ cafeName: 'BrewMaster', branchLocation: 'Downtown Branch', logoUrl: '' });
 
   useEffect(() => {
@@ -55,55 +54,131 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
       setBills(validBills);
       setOrders(validOrders);
       setProductsCount(validProducts.filter((p: any) => p.status !== 'Inactive' && p.status !== 'inactive').length);
-
-      // Compute Top Selling Items from real live bills
-      const itemMap: Record<string, { name: string; category: string; qty: number; revenue: number }> = {};
-      validBills.forEach((b: any) => {
-        if (Array.isArray(b.items)) {
-          b.items.forEach((i: any) => {
-            const name = i.product?.name || i.name || 'Item';
-            const cat = i.product?.category || 'Snacks';
-            const qty = i.quantity || 1;
-            const rev = (i.unitPrice || i.price || 0) * qty;
-            if (!itemMap[name]) {
-              itemMap[name] = { name, category: cat, qty: 0, revenue: 0 };
-            }
-            itemMap[name].qty += qty;
-            itemMap[name].revenue += rev;
-          });
-        }
-      });
-
-      const topList = Object.values(itemMap)
-        .sort((a, b) => b.qty - a.qty)
-        .slice(0, 5)
-        .map(t => ({
-          name: t.name,
-          category: t.category,
-          qty: t.qty,
-          revenue: `₹${t.revenue.toLocaleString()}`
-        }));
-
-      setTopItems(topList);
     }).catch(err => console.log('Error fetching dashboard live data:', err));
   }, []);
 
-  // Dynamic Live Metrics Calculations
-  const paidBills = bills.filter((b: any) => b.status === 'Paid' || b.status === 'paid');
-  const billsTotalAmount = bills.reduce((sum, b) => sum + (b.grandTotal || b.amount || 0), 0);
-  const ordersTotalAmount = orders.reduce((sum, o) => sum + (o.amount || 0), 0);
+  // Helper time range filter for Dashboard (Today, Week, Month, All Time)
+  const isItemInTimeFilter = (item: any, filter: 'Today' | 'Week' | 'Month' | 'All') => {
+    if (filter === 'All') return true;
+
+    const now = new Date();
+    const todayYear = now.getFullYear();
+    const todayMonth = now.getMonth();
+    const todayDate = now.getDate();
+
+    let itemDate: Date | null = null;
+
+    const rawDateStr = item.date || item.eventDate || item.createdAt;
+    if (!rawDateStr) return false;
+
+    if (typeof rawDateStr === 'string') {
+      const lower = rawDateStr.toLowerCase().trim();
+      if (lower === 'today') {
+        itemDate = now;
+      } else if (/^\d{4}-\d{2}-\d{2}/.test(lower)) {
+        // Parse YYYY-MM-DD directly in local timezone
+        const parts = lower.split('T')[0].split('-');
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        itemDate = new Date(year, month, day);
+      } else {
+        const parsed = new Date(rawDateStr);
+        if (!isNaN(parsed.getTime())) itemDate = parsed;
+      }
+    } else if (rawDateStr instanceof Date) {
+      itemDate = rawDateStr;
+    }
+
+    if (!itemDate && item.createdAt) {
+      const parsed = new Date(item.createdAt);
+      if (!isNaN(parsed.getTime())) itemDate = parsed;
+    }
+
+    if (!itemDate) return false;
+
+    if (filter === 'Today') {
+      return (
+        itemDate.getFullYear() === todayYear &&
+        itemDate.getMonth() === todayMonth &&
+        itemDate.getDate() === todayDate
+      );
+    }
+
+    if (filter === 'Week') {
+      const currentDay = now.getDay();
+      const distanceToMon = (currentDay + 6) % 7;
+
+      const startOfWeek = new Date(todayYear, todayMonth, todayDate - distanceToMon, 0, 0, 0);
+      const endOfWeek = new Date(todayYear, todayMonth, todayDate - distanceToMon + 6, 23, 59, 59, 999);
+
+      const sevenDaysAgo = new Date(todayYear, todayMonth, todayDate - 7, 0, 0, 0);
+      const sevenDaysFuture = new Date(todayYear, todayMonth, todayDate + 7, 23, 59, 59, 999);
+
+      const inCurrentWeek = itemDate >= startOfWeek && itemDate <= endOfWeek;
+      const in7DaysRange = itemDate >= sevenDaysAgo && itemDate <= sevenDaysFuture;
+
+      return inCurrentWeek || in7DaysRange;
+    }
+
+    if (filter === 'Month') {
+      return (
+        itemDate.getFullYear() === todayYear &&
+        itemDate.getMonth() === todayMonth
+      );
+    }
+
+    return true;
+  };
+
+  // Filter bills & orders dynamically based on selected active timeFilter
+  const filteredBills = bills.filter(b => isItemInTimeFilter(b, timeFilter));
+  const filteredOrders = orders.filter(o => isItemInTimeFilter(o, timeFilter));
+
+  // Dynamic Live Metrics Calculations based on filtered data
+  const paidBills = filteredBills.filter((b: any) => b.status === 'Paid' || b.status === 'paid');
+  const billsTotalAmount = filteredBills.reduce((sum, b) => sum + (b.grandTotal || b.amount || 0), 0);
+  const ordersTotalAmount = filteredOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
   const totalSalesVal = billsTotalAmount + ordersTotalAmount;
   const paidRevenueVal = paidBills.reduce((sum, b) => sum + (b.grandTotal || b.amount || 0), 0) +
-    orders.reduce((sum, o) => sum + (o.advanceReceived || 0), 0);
+    filteredOrders.reduce((sum, o) => sum + (o.advanceReceived || 0), 0);
 
-  const formattedBills: Bill[] = bills.map((b: any) => ({
+  // Compute Top Selling Items from live filtered bills
+  const itemMap: Record<string, { name: string; category: string; qty: number; revenue: number }> = {};
+  filteredBills.forEach((b: any) => {
+    if (Array.isArray(b.items)) {
+      b.items.forEach((i: any) => {
+        const name = i.product?.name || i.name || 'Item';
+        const cat = i.product?.category || i.category || 'Snacks';
+        const qty = i.quantity || 1;
+        const rev = (i.unitPrice || i.price || 0) * qty;
+        if (!itemMap[name]) {
+          itemMap[name] = { name, category: cat, qty: 0, revenue: 0 };
+        }
+        itemMap[name].qty += qty;
+        itemMap[name].revenue += rev;
+      });
+    }
+  });
+
+  const topItems = Object.values(itemMap)
+    .sort((a, b) => b.qty - a.qty)
+    .slice(0, 5)
+    .map(t => ({
+      name: t.name,
+      category: t.category,
+      qty: t.qty,
+      revenue: `₹${t.revenue.toLocaleString()}`
+    }));
+
+  const formattedBills: Bill[] = filteredBills.map((b: any) => ({
     id: b.billNo || b._id || `#B-${Date.now().toString().slice(-4)}`,
     customer: b.customerName || 'Walk-in Customer',
     items: b.items ? b.items.length : 1,
     amount: b.grandTotal || b.amount || 0,
     payment: b.paymentMethod || 'Cash',
     status: b.status === 'Held' ? 'Pending' : (b.status || 'Paid'),
-    date: b.time || b.date || 'Today',
+    date: b.time ? `${b.date || ''} ${b.time}` : (b.date || 'Today'),
     itemDetails: b.items ? b.items.map((i: any) => ({
       name: i.product?.name || i.name || 'Item',
       qty: i.quantity || 1,
@@ -111,35 +186,53 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
     })) : undefined
   }));
 
-  // Dynamic Sales by Category Breakdown from live bills
+  // Dynamic Sales by Category Breakdown from live filtered bills
   const categoryTotals: Record<string, number> = {
-    'Tea & Coffee': 0,
+    'Beverages': 0,
     'Snacks': 0,
     'Fast Food': 0,
     'Juices': 0,
+    'Cool Drinks': 0,
     'Desserts': 0
   };
 
-  bills.forEach((b: any) => {
+  const normalizeCategory = (cat?: string, name?: string): string => {
+    const n = (name || '').toLowerCase();
+    const c = (cat || '').toLowerCase();
+    if (c === 'beverages' || c === 'beverage' || c === 'tea' || c === 'coffee' || c === 'tea & coffee' ||
+        n.includes('tea') || n.includes('coffee') || n.includes('chai') || n.includes('latte') || n.includes('espresso') || n.includes('cappuccino')) {
+      return 'Beverages';
+    }
+    if (c === 'juices' || c === 'juice' || n.includes('juice')) return 'Juices';
+    if (c === 'cool drinks' || c === 'cool drink' || n.includes('soda') || n.includes('drink')) return 'Cool Drinks';
+    if (c === 'fast food' || n.includes('burger') || n.includes('pizza') || n.includes('sandwich')) return 'Fast Food';
+    if (c === 'desserts' || c === 'dessert' || n.includes('cake') || n.includes('ice cream')) return 'Desserts';
+    return 'Snacks';
+  };
+
+  filteredBills.forEach((b: any) => {
     if (Array.isArray(b.items)) {
       b.items.forEach((i: any) => {
-        const cat = i.product?.category || 'Snacks';
+        const prodName = i.product?.name || i.name || '';
+        const prodCat = i.product?.category || i.category || '';
+        const resolvedCat = normalizeCategory(prodCat, prodName);
         const rev = (i.unitPrice || i.price || 0) * (i.quantity || 1);
-        if (categoryTotals[cat] !== undefined) {
-          categoryTotals[cat] += rev;
+        if (categoryTotals[resolvedCat] !== undefined) {
+          categoryTotals[resolvedCat] += rev;
         } else {
-          categoryTotals['Snacks'] += rev;
+          categoryTotals['Beverages'] += rev;
         }
       });
     }
   });
 
-  const totalCatRev = Object.values(categoryTotals).reduce((a, b) => a + b, 0) || 1;
+  const totalCatRev = Object.values(categoryTotals).reduce((a, b) => a + b, 0) || 0;
   const categoryColors: Record<string, string> = {
-    'Tea & Coffee': 'bg-gradient-to-r from-amber-500 to-orange-500',
-    'Snacks': 'bg-[#78350f]',
+    'Beverages': 'bg-gradient-to-r from-amber-500 to-orange-500',
+    'Snacks': 'bg-amber-700',
     'Fast Food': 'bg-orange-400',
     'Juices': 'bg-amber-400',
+    'Cool Drinks': 'bg-sky-400',
     'Desserts': 'bg-slate-400'
   };
 
@@ -152,13 +245,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
     };
   });
 
-  // Dynamic Bars Calculation
-  const maxBarRev = Math.max(...Object.values(categoryTotals), 1);
+  // Dynamic Bars Calculation from real sales data
+  const maxBarRev = Math.max(...Object.values(categoryTotals), 0);
   const barsData = Object.entries(categoryTotals).map(([label, amount]) => ({
     label,
     amount,
-    height: `${Math.max(15, Math.round((amount / maxBarRev) * 100))}%`
+    height: maxBarRev > 0 ? `${Math.max(8, Math.round((amount / maxBarRev) * 100))}%` : '4%'
   }));
+
+  // Dynamic Y-axis scale values
+  const scaleTop = maxBarRev > 0 ? `₹${Math.round(maxBarRev).toLocaleString()}` : '₹1,000';
+  const scaleH3 = maxBarRev > 0 ? `₹${Math.round(maxBarRev * 0.75).toLocaleString()}` : '₹750';
+  const scaleH2 = maxBarRev > 0 ? `₹${Math.round(maxBarRev * 0.50).toLocaleString()}` : '₹500';
+  const scaleH1 = maxBarRev > 0 ? `₹${Math.round(maxBarRev * 0.25).toLocaleString()}` : '₹250';
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -166,6 +265,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
       onNavigate(tab);
     }
   };
+
+  const cardBgClass = isDarkMode 
+    ? 'bg-[#1e293b] border-slate-800 text-white' 
+    : 'bg-white border-orange-100/70 text-gray-900';
+  const textHeadingClass = isDarkMode ? 'text-white' : 'text-gray-900';
+  const textSubClass = isDarkMode ? 'text-slate-400' : 'text-gray-500';
 
   return (
     <div className={`flex h-screen font-sans overflow-hidden transition-colors duration-200 ${
@@ -194,77 +299,117 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
         />
 
         {/* Dashboard Scrollable Body */}
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">
+        <main className="flex-1 overflow-y-auto scrollbar-none p-6 space-y-6">
           
-          {/* Top 5 Stat Cards Section (Clean 5 Cards Layout) */}
+          {/* Top Filter Header Bar */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h2 className={`text-xl font-extrabold tracking-tight ${textHeadingClass}`}>Dashboard Analytics</h2>
+              <p className={`text-xs ${textSubClass}`}>
+                Showing live data for: <span className="font-bold text-amber-500">{timeFilter === 'Today' ? "Today's Sales & Orders" : timeFilter === 'Week' ? "Weekly Sales (Past 7 Days)" : timeFilter === 'Month' ? "Monthly Sales (Current Month)" : "All Time Sales Records"}</span>
+              </p>
+            </div>
+
+            {/* Global Dashboard Time Filter */}
+            <div className={`flex items-center p-1 rounded-xl text-xs font-semibold border ${
+              isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-amber-200/80 shadow-2xs'
+            }`}>
+              <span className={`px-2.5 text-[11px] font-extrabold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-amber-900/60'}`}>
+                Filter:
+              </span>
+              {(['Today', 'Week', 'Month', 'All'] as const).map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setTimeFilter(filter)}
+                  className={`px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer ${
+                    timeFilter === filter
+                      ? 'bg-[#78350f] text-white font-extrabold shadow-xs'
+                      : isDarkMode ? 'text-slate-300 hover:text-white hover:bg-slate-700/50' : 'text-gray-600 hover:text-gray-900 hover:bg-amber-50'
+                  }`}
+                >
+                  {filter === 'Today' ? 'Today' : filter === 'Week' ? 'Weekly' : filter === 'Month' ? 'Monthly' : 'All Time'}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Top 5 Stat Cards Section */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             
-            {/* Card 1: Today's Sales */}
-            <div className="bg-white rounded-xl p-5 border border-orange-100/70 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between">
+            {/* Card 1: Sales */}
+            <div className={`${cardBgClass} rounded-xl p-5 border shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between`}>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-gray-500 tracking-wide">Today's Sales</span>
-                <div className="w-9 h-9 rounded-lg bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-600">
+                <span className={`text-xs font-semibold tracking-wide ${textSubClass}`}>
+                  {timeFilter === 'Today' ? "Today's Sales" : timeFilter === 'Week' ? "Weekly Sales" : timeFilter === 'Month' ? "Monthly Sales" : "All Sales"}
+                </span>
+                <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
                   <Receipt className="w-5 h-5" />
                 </div>
               </div>
               <div className="mt-3">
-                <h3 className="text-2xl font-extrabold text-gray-900 tracking-tight">₹{totalSalesVal.toLocaleString()}</h3>
-                <div className="flex items-center gap-1 mt-1 text-emerald-600 text-xs font-semibold">
+                <h3 className={`text-2xl font-extrabold tracking-tight ${textHeadingClass}`}>₹{totalSalesVal.toLocaleString()}</h3>
+                <div className="flex items-center gap-1 mt-1 text-emerald-500 text-xs font-semibold">
                   <TrendingUp className="w-3.5 h-3.5" />
                   <span>Live POS + Orders</span>
                 </div>
               </div>
             </div>
 
-            {/* Card 2: Today's Bills */}
-            <div className="bg-white rounded-xl p-5 border border-orange-100/70 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between">
+            {/* Card 2: Bills */}
+            <div className={`${cardBgClass} rounded-xl p-5 border shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between`}>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-gray-500 tracking-wide">Today's Bills</span>
-                <div className="w-9 h-9 rounded-lg bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-600">
+                <span className={`text-xs font-semibold tracking-wide ${textSubClass}`}>
+                  {timeFilter === 'Today' ? "Today's Bills" : timeFilter === 'Week' ? "Weekly Bills" : timeFilter === 'Month' ? "Monthly Bills" : "All Bills"}
+                </span>
+                <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
                   <Receipt className="w-5 h-5" />
                 </div>
               </div>
               <div className="mt-3">
-                <h3 className="text-2xl font-extrabold text-gray-900 tracking-tight">{bills.length}</h3>
+                <h3 className={`text-2xl font-extrabold tracking-tight ${textHeadingClass}`}>{filteredBills.length}</h3>
               </div>
             </div>
 
-            {/* Card 3: Today's Orders */}
-            <div className="bg-white rounded-xl p-5 border border-orange-100/70 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between">
+            {/* Card 3: Orders */}
+            <div className={`${cardBgClass} rounded-xl p-5 border shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between`}>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-gray-500 tracking-wide">Today's Orders</span>
-                <div className="w-9 h-9 rounded-lg bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-600">
+                <span className={`text-xs font-semibold tracking-wide ${textSubClass}`}>
+                  {timeFilter === 'Today' ? "Today's Orders" : timeFilter === 'Week' ? "Weekly Orders" : timeFilter === 'Month' ? "Monthly Orders" : "All Orders"}
+                </span>
+                <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
                   <ShoppingBag className="w-5 h-5" />
                 </div>
               </div>
               <div className="mt-3">
-                <h3 className="text-2xl font-extrabold text-gray-900 tracking-tight">{orders.length}</h3>
+                <h3 className={`text-2xl font-extrabold tracking-tight ${textHeadingClass}`}>{filteredOrders.length}</h3>
               </div>
             </div>
 
             {/* Card 4: Total Products */}
-            <div className="bg-white rounded-xl p-5 border border-orange-100/70 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between">
+            <div className={`${cardBgClass} rounded-xl p-5 border shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between`}>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-gray-500 tracking-wide">Total Products</span>
-                <div className="w-9 h-9 rounded-lg bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-600">
+                <span className={`text-xs font-semibold tracking-wide ${textSubClass}`}>Total Products</span>
+                <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
                   <Package className="w-5 h-5" />
                 </div>
               </div>
               <div className="mt-3">
-                <h3 className="text-2xl font-extrabold text-gray-900 tracking-tight">{productsCount}</h3>
+                <h3 className={`text-2xl font-extrabold tracking-tight ${textHeadingClass}`}>{productsCount}</h3>
               </div>
             </div>
 
-            {/* Card 5: Today's Revenue */}
-            <div className="bg-white rounded-xl p-5 border border-orange-100/70 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between">
+            {/* Card 5: Revenue */}
+            <div className={`${cardBgClass} rounded-xl p-5 border shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between`}>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-gray-500 tracking-wide">Today's Revenue</span>
-                <div className="w-9 h-9 rounded-lg bg-emerald-50 border border-emerald-200/60 flex items-center justify-center text-emerald-600">
+                <span className={`text-xs font-semibold tracking-wide ${textSubClass}`}>
+                  {timeFilter === 'Today' ? "Today's Revenue" : timeFilter === 'Week' ? "Weekly Revenue" : timeFilter === 'Month' ? "Monthly Revenue" : "All Revenue"}
+                </span>
+                <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-500">
                   <Wallet className="w-5 h-5" />
                 </div>
               </div>
               <div className="mt-3">
-                <h3 className="text-2xl font-extrabold text-gray-900 tracking-tight">₹{paidRevenueVal.toLocaleString()}</h3>
+                <h3 className={`text-2xl font-extrabold tracking-tight ${textHeadingClass}`}>₹{paidRevenueVal.toLocaleString()}</h3>
               </div>
             </div>
 
@@ -274,25 +419,27 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             {/* Left Card (2 Cols): Product Sales & Revenue Bar Chart */}
-            <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-gray-200/80 shadow-2xs flex flex-col justify-between">
+            <div className={`lg:col-span-2 ${cardBgClass} rounded-2xl p-6 border shadow-2xs flex flex-col justify-between`}>
               
               {/* Header with Filter Buttons */}
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-base font-bold text-gray-900 tracking-tight">Product Sales & Revenue</h3>
+                <h3 className={`text-base font-bold tracking-tight ${textHeadingClass}`}>Product Sales & Revenue</h3>
                 
                 {/* Time Filter Pills */}
-                <div className="flex items-center bg-gray-100 p-1 rounded-full text-xs font-medium border border-gray-200/60">
-                  {(['Today', 'Week', 'Month'] as const).map((filter) => (
+                <div className={`flex items-center p-1 rounded-full text-xs font-medium border ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-200/60'
+                }`}>
+                  {(['Today', 'Week', 'Month', 'All'] as const).map((filter) => (
                     <button
                       key={filter}
                       onClick={() => setTimeFilter(filter)}
-                      className={`px-4 py-1 rounded-full transition-all duration-200 ${
+                      className={`px-3 py-1 rounded-full transition-all duration-200 cursor-pointer ${
                         timeFilter === filter
                           ? 'bg-[#78350f] text-white font-semibold shadow-xs'
-                          : 'text-gray-600 hover:text-gray-900'
+                          : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
-                      {filter}
+                      {filter === 'All' ? 'All Time' : filter === 'Week' ? 'Weekly' : filter === 'Month' ? 'Monthly' : 'Today'}
                     </button>
                   ))}
                 </div>
@@ -302,20 +449,20 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
               <div className="relative h-64 w-full pt-4 flex flex-col justify-between">
                 
                 {/* Grid Y-axis guides */}
-                <div className="absolute inset-0 flex flex-col justify-between pointer-events-none text-xs text-gray-400 font-medium">
-                  <div className="border-b border-gray-100 pb-1 flex justify-between">
-                    <span>₹10k</span>
+                <div className={`absolute inset-0 flex flex-col justify-between pointer-events-none text-xs font-medium ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`}>
+                  <div className={`border-b pb-1 flex justify-between ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
+                    <span>{scaleTop}</span>
                   </div>
-                  <div className="border-b border-gray-100 pb-1 flex justify-between">
-                    <span>₹7.5k</span>
+                  <div className={`border-b pb-1 flex justify-between ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
+                    <span>{scaleH3}</span>
                   </div>
-                  <div className="border-b border-gray-100 pb-1 flex justify-between">
-                    <span>₹5k</span>
+                  <div className={`border-b pb-1 flex justify-between ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
+                    <span>{scaleH2}</span>
                   </div>
-                  <div className="border-b border-gray-100 pb-1 flex justify-between">
-                    <span>₹2.5k</span>
+                  <div className={`border-b pb-1 flex justify-between ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
+                    <span>{scaleH1}</span>
                   </div>
-                  <div className="border-b border-gray-200 pb-1 flex justify-between">
+                  <div className={`border-b pb-1 flex justify-between ${isDarkMode ? 'border-slate-700' : 'border-gray-200'}`}>
                     <span>0</span>
                   </div>
                 </div>
@@ -339,7 +486,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
                       </div>
 
                       {/* Label under bar */}
-                      <span className="text-xs font-medium text-gray-500 mt-3 group-hover:text-gray-900 group-hover:font-semibold transition-colors">
+                      <span className={`text-xs font-medium mt-3 transition-colors ${
+                        isDarkMode ? 'text-slate-400 group-hover:text-amber-400' : 'text-gray-500 group-hover:text-gray-900'
+                      }`}>
                         {bar.label}
                       </span>
                     </div>
@@ -351,22 +500,22 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
             </div>
 
             {/* Right Card (1 Col): Sales by Category */}
-            <div className="bg-white rounded-2xl p-6 border border-gray-200/80 shadow-2xs flex flex-col justify-between">
+            <div className={`${cardBgClass} rounded-2xl p-6 border shadow-2xs flex flex-col justify-between`}>
               
-              <h3 className="text-base font-bold text-gray-900 tracking-tight mb-5">
+              <h3 className={`text-base font-bold tracking-tight mb-5 ${textHeadingClass}`}>
                 Sales by Category
               </h3>
 
               <div className="space-y-4">
                 {categoriesData.map((cat) => (
                   <div key={cat.name} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs font-semibold text-gray-700">
+                    <div className={`flex items-center justify-between text-xs font-semibold ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                       <span>{cat.name}</span>
-                      <span className="text-gray-900 font-bold">{cat.percentage}%</span>
+                      <span className={`font-bold ${textHeadingClass}`}>{cat.percentage}%</span>
                     </div>
                     
                     {/* Progress Track */}
-                    <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className={`w-full h-2.5 rounded-full overflow-hidden ${isDarkMode ? 'bg-slate-800' : 'bg-gray-100'}`}>
                       <div 
                         className={`h-full rounded-full transition-all duration-500 ${cat.color}`}
                         style={{ width: `${cat.percentage}%` }}
@@ -376,8 +525,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
                 ))}
               </div>
 
-              <div className="mt-4 pt-4 border-t border-gray-100 text-center">
-                <span className="text-xs text-gray-400 font-medium">
+              <div className={`mt-4 pt-4 border-t text-center ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
+                <span className={`text-xs font-medium ${textSubClass}`}>
                   Updated live from actual sales
                 </span>
               </div>
@@ -390,32 +539,34 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
             {/* Left Box (5 cols): Top Selling Items */}
-            <div className="lg:col-span-5 bg-white rounded-2xl p-6 border border-gray-200/80 shadow-2xs flex flex-col justify-between">
+            <div className={`lg:col-span-5 ${cardBgClass} rounded-2xl p-6 border shadow-2xs flex flex-col justify-between`}>
               
-              <h3 className="text-base font-bold text-gray-900 tracking-tight mb-4">
+              <h3 className={`text-base font-bold tracking-tight mb-4 ${textHeadingClass}`}>
                 Top Selling Items
               </h3>
 
               <div className="overflow-x-auto">
                 {topItems.length === 0 ? (
-                  <p className="text-xs text-gray-400 py-6 text-center">No sales recorded yet.</p>
+                  <p className={`text-xs py-6 text-center ${textSubClass}`}>
+                    No sales recorded {timeFilter === 'Today' ? 'today' : timeFilter === 'Week' ? 'this week' : timeFilter === 'Month' ? 'this month' : 'all time'}.
+                  </p>
                 ) : (
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                      <tr className={`border-b text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-slate-800 text-slate-500' : 'border-gray-100 text-gray-400'}`}>
                         <th className="pb-3 pr-2">Product</th>
                         <th className="pb-3 px-2">Category</th>
                         <th className="pb-3 px-2 text-right">Qty Sold</th>
                         <th className="pb-3 pl-2 text-right">Revenue</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-50 text-xs">
+                    <tbody className={`divide-y text-xs ${isDarkMode ? 'divide-slate-800' : 'divide-gray-50'}`}>
                       {topItems.map((item, idx) => (
-                        <tr key={idx} className="hover:bg-amber-50/40 transition-colors">
-                          <td className="py-3 pr-2 font-semibold text-gray-900">{item.name}</td>
-                          <td className="py-3 px-2 text-gray-500">{item.category}</td>
-                          <td className="py-3 px-2 text-right font-medium text-gray-700">{item.qty}</td>
-                          <td className="py-3 pl-2 text-right font-bold text-gray-900">{item.revenue}</td>
+                        <tr key={idx} className={isDarkMode ? 'hover:bg-slate-800/60' : 'hover:bg-amber-50/40'}>
+                          <td className={`py-3 pr-2 font-semibold ${textHeadingClass}`}>{item.name}</td>
+                          <td className={`py-3 px-2 ${textSubClass}`}>{item.category}</td>
+                          <td className={`py-3 px-2 text-right font-medium ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>{item.qty}</td>
+                          <td className={`py-3 pl-2 text-right font-bold ${textHeadingClass}`}>{item.revenue}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -426,16 +577,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
             </div>
 
             {/* Right Box (7 cols): Recent Bills */}
-            <div className="lg:col-span-7 bg-white rounded-2xl p-6 border border-gray-200/80 shadow-2xs flex flex-col justify-between">
+            <div className={`lg:col-span-7 ${cardBgClass} rounded-2xl p-6 border shadow-2xs flex flex-col justify-between`}>
               
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-bold text-gray-900 tracking-tight">
+                <h3 className={`text-base font-bold tracking-tight ${textHeadingClass}`}>
                   Recent Bills
                 </h3>
                 {formattedBills.length > 3 && (
                   <button 
                     onClick={() => setShowAllBills(!showAllBills)}
-                    className="text-xs font-bold text-[#8b4513] hover:text-[#70370f] hover:underline transition cursor-pointer"
+                    className="text-xs font-bold text-amber-500 hover:underline transition cursor-pointer"
                   >
                     {showAllBills ? 'Show Less' : 'View All'}
                   </button>
@@ -444,11 +595,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
 
               <div className="overflow-x-auto">
                 {formattedBills.length === 0 ? (
-                  <p className="text-xs text-gray-400 py-6 text-center">No bills created yet.</p>
+                  <p className={`text-xs py-6 text-center ${textSubClass}`}>
+                    No bills created {timeFilter === 'Today' ? 'today' : timeFilter === 'Week' ? 'this week' : timeFilter === 'Month' ? 'this month' : 'in selected period'}.
+                  </p>
                 ) : (
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                      <tr className={`border-b text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-slate-800 text-slate-500' : 'border-gray-100 text-gray-400'}`}>
                         <th className="pb-3 pr-2">Bill No</th>
                         <th className="pb-3 px-2">Customer</th>
                         <th className="pb-3 px-2 text-center">Items</th>
@@ -459,14 +612,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
                         <th className="pb-3 pl-2 text-center">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-50 text-xs">
+                    <tbody className={`divide-y text-xs ${isDarkMode ? 'divide-slate-800' : 'divide-gray-50'}`}>
                       {formattedBills.slice(0, showAllBills ? 10 : 3).map((bill) => (
-                        <tr key={bill.id} className="hover:bg-amber-50/40 transition-colors">
-                          <td className="py-3.5 pr-2 font-bold text-gray-900">{bill.id}</td>
-                          <td className="py-3.5 px-2 font-medium text-gray-700">{bill.customer}</td>
-                          <td className="py-3.5 px-2 text-center text-gray-600">{bill.items}</td>
-                          <td className="py-3.5 px-2 font-bold text-gray-900">₹{bill.amount.toLocaleString()}</td>
-                          <td className="py-3.5 px-2 text-gray-600">{bill.payment}</td>
+                        <tr key={bill.id} className={isDarkMode ? 'hover:bg-slate-800/60' : 'hover:bg-amber-50/40'}>
+                          <td className={`py-3.5 pr-2 font-bold ${textHeadingClass}`}>{bill.id}</td>
+                          <td className={`py-3.5 px-2 font-medium ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>{bill.customer}</td>
+                          <td className={`py-3.5 px-2 text-center ${textSubClass}`}>{bill.items}</td>
+                          <td className={`py-3.5 px-2 font-bold ${textHeadingClass}`}>₹{bill.amount.toLocaleString()}</td>
+                          <td className={`py-3.5 px-2 ${textSubClass}`}>{bill.payment}</td>
                           <td className="py-3.5 px-2">
                             {bill.status === 'Paid' ? (
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
@@ -478,11 +631,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
                               </span>
                             )}
                           </td>
-                          <td className="py-3.5 px-2 text-gray-500">{bill.date}</td>
+                          <td className={`py-3.5 px-2 ${textSubClass}`}>{bill.date}</td>
                           <td className="py-3.5 pl-2 text-center">
                             <button
                               onClick={() => setSelectedBill(bill)}
-                              className="p-1.5 text-gray-400 hover:text-[#8b4513] hover:bg-amber-100/60 rounded-lg transition cursor-pointer"
+                              className={`p-1.5 rounded-lg transition cursor-pointer ${
+                                isDarkMode ? 'text-slate-400 hover:text-amber-400 hover:bg-slate-800' : 'text-gray-400 hover:text-[#8b4513] hover:bg-amber-100/60'
+                              }`}
                               title="View Bill Details"
                             >
                               <Eye className="w-4 h-4" />
@@ -504,8 +659,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
 
       {/* Bill Detail View Modal */}
       {selectedBill && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 border border-gray-100 relative">
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className={`${isDarkMode ? 'bg-[#1e293b] text-white border-slate-800' : 'bg-white text-gray-900 border-gray-100'} rounded-2xl shadow-2xl w-full max-w-md p-6 border relative`}>
             
             <button
               onClick={() => setSelectedBill(null)}
@@ -519,31 +674,31 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
                 <Receipt className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">
+                <h3 className={`text-lg font-bold ${textHeadingClass}`}>
                   Bill Details {selectedBill.id}
                 </h3>
-                <span className="text-xs text-gray-500">
+                <span className={`text-xs ${textSubClass}`}>
                   Customer: {selectedBill.customer} | {selectedBill.date}
                 </span>
               </div>
             </div>
 
-            <div className="space-y-3 border-t border-b border-gray-100 py-4 my-4">
+            <div className={`space-y-3 border-t border-b py-4 my-4 ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
               <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex justify-between">
                 <span>Item</span>
                 <span>Qty x Price</span>
               </div>
               {selectedBill.itemDetails?.map((item, idx) => (
-                <div key={idx} className="flex justify-between text-sm text-gray-800">
+                <div key={idx} className={`flex justify-between text-sm ${isDarkMode ? 'text-slate-300' : 'text-gray-800'}`}>
                   <span className="font-medium">{item.name}</span>
-                  <span className="font-semibold text-gray-900">{item.qty} × ₹{item.price / (item.qty || 1)} = ₹{item.price}</span>
+                  <span className={`font-semibold ${textHeadingClass}`}>{item.qty} × ₹{item.price / (item.qty || 1)} = ₹{item.price}</span>
                 </div>
               ))}
             </div>
 
-            <div className="flex justify-between items-center text-base font-bold text-gray-900 mb-6">
-              <span>Total Amount:</span>
-              <span className="text-xl text-[#8b4513]">₹{selectedBill.amount.toLocaleString()}</span>
+            <div className="flex justify-between items-center text-base font-bold mb-6">
+              <span className={textHeadingClass}>Total Amount:</span>
+              <span className="text-xl text-amber-500">₹{selectedBill.amount.toLocaleString()}</span>
             </div>
 
             <div className="flex gap-3">
@@ -559,7 +714,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
               </button>
               <button
                 onClick={() => setSelectedBill(null)}
-                className="px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-xl text-sm transition cursor-pointer"
+                className={`px-4 font-semibold py-2.5 rounded-xl text-sm transition cursor-pointer ${
+                  isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                }`}
               >
                 Close
               </button>

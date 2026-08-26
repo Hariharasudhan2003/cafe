@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Bell, PauseCircle } from 'lucide-react';
+import { apiGetOrders } from '../services/api';
 
 interface NavbarProps {
   activeView?: string;
@@ -22,10 +23,73 @@ export const Navbar: React.FC<NavbarProps> = ({
   isDarkMode = false,
   cafeName = 'BrewMaster',
   logoUrl,
-  upcomingAlerts = []
+  upcomingAlerts: propUpcomingAlerts = []
 }) => {
-  const [isNotifOpen, setIsNotifOpen] = React.useState<boolean>(false);
+  const [isNotifOpen, setIsNotifOpen] = useState<boolean>(false);
+  const [fetchedAlerts, setFetchedAlerts] = useState<{ code: string; customer: string; date: string; gapText?: string }[]>([]);
+  const leaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    apiGetOrders()
+      .then((orders) => {
+        if (Array.isArray(orders)) {
+          const now = new Date();
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+          const alerts = orders
+            .filter((o: any) => o.status !== 'Completed' && o.status !== 'Cancelled')
+            .map((o: any) => {
+              const parsedDate = new Date(o.eventDate);
+              if (isNaN(parsedDate.getTime())) return null;
+              const orderDay = new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate()).getTime();
+              const gapDays = Math.round((orderDay - today) / (1000 * 60 * 60 * 24));
+
+              if (gapDays >= 0 && gapDays <= 2) {
+                return {
+                  code: o.code || 'Order',
+                  customer: o.customer || 'Customer',
+                  date: o.eventDate,
+                  gapText: gapDays === 0 ? "Event is Today!" : gapDays === 1 ? "1 Day Gap (Tomorrow)" : "2 Days Gap (In 2 Days)"
+                };
+              }
+              return null;
+            })
+            .filter(Boolean);
+          setFetchedAlerts(alerts as any[]);
+        }
+      })
+      .catch(() => {});
+  }, [activeView]);
+
+  const activeAlerts = propUpcomingAlerts.length > 0 ? propUpcomingAlerts : fetchedAlerts;
   const isPosPage = activeView === 'POS' || activeView === 'POS Billing' || activeView === 'POSBilling';
+
+  const handleMouseEnter = () => {
+    if (leaveTimerRef.current) {
+      clearTimeout(leaveTimerRef.current);
+      leaveTimerRef.current = null;
+    }
+    setIsNotifOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    if (leaveTimerRef.current) {
+      clearTimeout(leaveTimerRef.current);
+    }
+    leaveTimerRef.current = setTimeout(() => {
+      setIsNotifOpen(false);
+    }, 2000); // 2-second delay after leaving hover
+  };
+
+  const handleNotificationClick = () => {
+    if (leaveTimerRef.current) {
+      clearTimeout(leaveTimerRef.current);
+    }
+    setIsNotifOpen(false);
+    if (onViewChange) {
+      onViewChange('Orders');
+    }
+  };
 
   return (
     <header className={`h-16 px-6 flex items-center justify-between sticky top-0 z-10 shadow-xs transition-colors duration-200 ${
@@ -99,11 +163,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           Create Bill
         </button>
 
-        {/* Bell Notification Icon with Hover Popover */}
+        {/* Bell Notification Icon with Hover Popover & 2-Second Delay */}
         <div 
           className="relative"
-          onMouseEnter={() => setIsNotifOpen(true)}
-          onMouseLeave={() => setIsNotifOpen(false)}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
         >
           <button 
             onClick={() => setIsNotifOpen(!isNotifOpen)}
@@ -112,29 +176,40 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             <Bell className="w-5 h-5" />
-            {upcomingAlerts.length > 0 && (
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-slate-800 animate-pulse"></span>
+            {activeAlerts.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full min-w-[18px] text-center shadow-xs animate-pulse">
+                {activeAlerts.length}
+              </span>
             )}
           </button>
 
           {/* Notification Popover Dropdown */}
           {isNotifOpen && (
-            <div className={`absolute right-0 mt-2 w-72 rounded-2xl shadow-xl border p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150 ${
-              isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-200 text-gray-800'
-            }`}>
+            <div 
+              className={`absolute right-0 mt-2 w-76 rounded-2xl shadow-xl border p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150 ${
+                isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-200 text-gray-800'
+              }`}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
+            >
               <div className="flex items-center justify-between pb-2 border-b border-gray-200/50 mb-2">
                 <span className="font-bold text-xs">Event Order Notifications</span>
                 <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">
-                  {upcomingAlerts.length} Urgent
+                  {activeAlerts.length} Urgent
                 </span>
               </div>
 
-              {upcomingAlerts.length === 0 ? (
-                <p className="text-xs text-gray-400 py-2 text-center">No urgent order alerts for today or tomorrow.</p>
+              {activeAlerts.length === 0 ? (
+                <p className="text-xs text-gray-400 py-2 text-center">No urgent order alerts for today, tomorrow or next 2 days.</p>
               ) : (
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {upcomingAlerts.map((alert, idx) => (
-                    <div key={idx} className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs space-y-1">
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {activeAlerts.map((alert, idx) => (
+                    <div 
+                      key={idx} 
+                      onClick={handleNotificationClick}
+                      className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs space-y-1 cursor-pointer hover:bg-amber-500/20 hover:border-amber-500/50 transition-all duration-150 active:scale-[0.99]"
+                      title="Click to view in Orders Page"
+                    >
                       <div className="flex items-center justify-between font-bold text-amber-600">
                         <span>⚠️ Order {alert.code}</span>
                         <span className="text-[10px] text-red-500 font-extrabold">{alert.gapText || "1 Day Gap"}</span>

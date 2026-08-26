@@ -8,7 +8,7 @@ import {
 import { Sidebar } from '../components/Sidebar';
 import { Navbar } from '../components/Navbar';
 import type { ProductItem } from './ProductsPage';
-import { apiCreateProduct } from '../services/api';
+import { apiCreateProduct, apiGetProducts } from '../services/api';
 
 interface AddNewProductPageProps {
   onNavigate?: (tab: string) => void;
@@ -60,8 +60,18 @@ export const AddNewProductPage: React.FC<AddNewProductPageProps> = ({
       return;
     }
 
+    let nextNum = 1;
+    try {
+      const existingProds = await apiGetProducts();
+      if (Array.isArray(existingProds)) {
+        nextNum = existingProds.length + 1;
+      }
+    } catch (e) {}
+
+    const seqCode = `#PRD-${String(nextNum).padStart(3, '0')}`;
+
     const payload = {
-      code: `#PRD-0${Math.floor(Math.random() * 90 + 10)}`,
+      code: seqCode,
       name: productName,
       category,
       price: parseFloat(price) || 0,
