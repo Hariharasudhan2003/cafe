@@ -1,4 +1,16 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const getApiBaseUrl = (): string => {
+  let envUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  envUrl = envUrl.trim();
+  if (envUrl.endsWith('/')) {
+    envUrl = envUrl.slice(0, -1);
+  }
+  if (!envUrl.endsWith('/api')) {
+    envUrl = `${envUrl}/api`;
+  }
+  return envUrl;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Helper for standard API calls with fallback graceful handling
 async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {

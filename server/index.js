@@ -33,12 +33,21 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Routes
+// Routes (Supports both /api prefix and direct endpoints)
 app.use('/api/products', productRoutes);
+app.use('/products', productRoutes);
+
 app.use('/api/orders', orderRoutes);
+app.use('/orders', orderRoutes);
+
 app.use('/api/bills', billRoutes);
+app.use('/bills', billRoutes);
+
 app.use('/api/settings', settingRoutes);
+app.use('/settings', settingRoutes);
+
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/dashboard', dashboardRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
