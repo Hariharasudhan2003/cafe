@@ -58,7 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-[#232936] text-gray-300 flex flex-col justify-between h-screen select-none shadow-2xl border-r border-slate-700/50 shrink-0 transition-transform duration-300 ease-in-out
-        lg:static lg:translate-x-0 lg:z-auto
+        lg:relative lg:inset-auto lg:z-auto lg:translate-x-0
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         {/* Top Header & Navigation */}
