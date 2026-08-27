@@ -776,7 +776,7 @@ export const POSPage: React.FC<POSPageProps> = ({
                   <p className="text-base font-medium">No products found</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-6">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 pb-6">
                   {filteredProducts.map((product) => {
                     const isInactive = product.status === 'Inactive';
 
@@ -784,14 +784,14 @@ export const POSPage: React.FC<POSPageProps> = ({
                       <div
                         key={product.id}
                         onClick={() => !isInactive && handleAddToCart(product)}
-                        className={`bg-white rounded-2xl p-3 border shadow-xs transition-all flex flex-col justify-between group ${
+                        className={`bg-white rounded-2xl p-2.5 sm:p-3 border shadow-xs transition-all flex flex-col justify-between group ${
                           isInactive 
                             ? 'opacity-60 bg-slate-50 cursor-not-allowed border-red-200/80' 
                             : 'hover:shadow-md border-gray-100 cursor-pointer'
                         }`}
                       >
                         {/* Product Image */}
-                        <div className="relative w-full h-36 rounded-xl overflow-hidden mb-3 bg-gray-100">
+                        <div className="relative w-full h-24 sm:h-28 rounded-xl overflow-hidden mb-2 bg-gray-100">
                           <img
                             src={product.image}
                             alt={product.name}
@@ -810,11 +810,11 @@ export const POSPage: React.FC<POSPageProps> = ({
                         </div>
 
                         {/* Info & Price */}
-                        <div className="flex items-center justify-between mb-3 px-1">
-                          <h3 className={`font-bold text-base truncate max-w-[120px] ${isInactive ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
+                        <div className="flex items-center justify-between mb-2 px-0.5">
+                          <h3 className={`font-bold text-xs sm:text-sm truncate flex-1 pr-1 ${isInactive ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
                             {product.name}
                           </h3>
-                          <span className={`font-bold text-lg ${isInactive ? 'text-gray-400' : 'text-[#8b4513]'}`}>
+                          <span className={`font-extrabold text-xs sm:text-sm shrink-0 ${isInactive ? 'text-gray-400' : 'text-[#8b4513]'}`}>
                             ₹{product.price}
                           </span>
                         </div>
@@ -826,13 +826,13 @@ export const POSPage: React.FC<POSPageProps> = ({
                             e.stopPropagation();
                             if (!isInactive) handleAddToCart(product);
                           }}
-                          className={`w-full py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                          className={`w-full py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 ${
                             isInactive 
                               ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
                               : 'bg-[#edf2f7] group-hover:bg-[#f97316] group-hover:text-white text-gray-700 active:scale-[0.98] cursor-pointer'
                           }`}
                         >
-                          <Plus className="w-4 h-4" />
+                          <Plus className="w-3.5 h-3.5" />
                           <span>{isInactive ? 'Disabled' : 'Add'}</span>
                         </button>
                       </div>
