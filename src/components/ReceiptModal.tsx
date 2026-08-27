@@ -82,13 +82,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           #printable-receipt-card {
             position: absolute !important;
             left: 50% !important;
-            top: 20px !important;
-            transform: translateX(-50%) !important;
-            width: 80mm !important;
-            max-width: 80mm !important;
+            top: 5px !important;
+            transform: translateX(-50%) scale(0.88) !important;
+            transform-origin: top center !important;
+            width: 58mm !important;
+            max-width: 58mm !important;
             box-shadow: none !important;
             border: none !important;
-            padding: 10px !important;
+            padding: 4px !important;
             margin: 0 !important;
             background: white !important;
             color: black !important;
