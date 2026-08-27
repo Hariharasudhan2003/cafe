@@ -727,36 +727,36 @@ export const POSPage: React.FC<POSPageProps> = ({
           {/* Left Column: Product Catalog & Search */}
           <section className="flex-1 flex flex-col gap-5 overflow-hidden min-h-0">
             {/* Top Search Bar & Add Item Button */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2.5">
               <div className="flex-1 relative flex items-center">
-                <Search className="w-5 h-5 text-gray-400 absolute left-4 pointer-events-none" />
+                <Search className="w-4 h-4 text-gray-400 absolute left-3 pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Search products..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-[#edf2f7] hover:bg-slate-200/80 focus:bg-white text-gray-800 pl-11 pr-4 py-3 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-amber-500/40 transition-all placeholder:text-gray-400"
+                  className="w-full bg-[#edf2f7] hover:bg-slate-200/80 focus:bg-white text-gray-800 pl-9 pr-3 py-2 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-amber-500/40 transition-all placeholder:text-gray-400"
                 />
               </div>
 
               <button
                 onClick={() => setIsAddItemOpen(true)}
-                className="bg-[#f97316] hover:bg-orange-600 text-white font-medium text-sm py-3 px-5 rounded-xl shadow-sm flex items-center gap-2 transition-all active:scale-[0.98] shrink-0 cursor-pointer"
+                className="bg-[#f97316] hover:bg-orange-600 text-white font-medium text-xs py-2 px-3.5 rounded-xl shadow-sm flex items-center gap-1.5 transition-all active:scale-[0.98] shrink-0 cursor-pointer"
               >
-                <Plus className="w-5 h-5" />
+                <Plus className="w-4 h-4" />
                 <span>Add Item</span>
               </button>
             </div>
 
             {/* Category Filter Pills */}
-            <div className="flex items-center gap-2.5 overflow-x-auto pb-1 scrollbar-none">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
               {allCategoryOptions.map((cat) => {
                 const isActive = selectedCategory === cat;
                 return (
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
-                    className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all whitespace-nowrap cursor-pointer ${
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
                       isActive
                         ? 'bg-[#f97316] text-white shadow-sm font-semibold'
                         : 'bg-[#edf2f7] text-gray-700 hover:bg-gray-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'
@@ -851,14 +851,14 @@ export const POSPage: React.FC<POSPageProps> = ({
       </div>
 
       {/* Floating Mobile Bill Icon Button */}
-      <div className="fixed bottom-6 right-6 z-40 lg:hidden">
+      <div className="fixed bottom-5 right-5 z-40 lg:hidden">
         <button
           onClick={() => setIsMobileBillOpen(true)}
-          className="bg-[#f97316] hover:bg-orange-600 text-white font-bold text-sm py-3.5 px-5 rounded-full shadow-2xl flex items-center gap-2.5 active:scale-[0.95] transition-all cursor-pointer border-2 border-white"
+          className="bg-[#f97316] hover:bg-orange-600 text-white font-bold text-xs py-2.5 px-4 rounded-full shadow-xl flex items-center gap-2 active:scale-[0.95] transition-all cursor-pointer border border-white"
         >
-          <ShoppingBag className="w-5 h-5" />
+          <ShoppingBag className="w-4 h-4" />
           <span>View Bill</span>
-          <span className="bg-white text-[#f97316] text-xs font-extrabold px-2 py-0.5 rounded-full shadow-xs min-w-[20px] text-center">
+          <span className="bg-white text-[#f97316] text-[10px] font-extrabold px-1.5 py-0.2 rounded-full shadow-xs min-w-[18px] text-center">
             {cart.reduce((sum, item) => sum + item.quantity, 0)}
           </span>
         </button>

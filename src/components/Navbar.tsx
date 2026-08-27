@@ -148,17 +148,17 @@ export const Navbar: React.FC<NavbarProps> = ({
         {isPosPage && (
           <button
             onClick={onOpenHeldBills}
-            className={`relative font-bold text-xs px-3 py-2 rounded-xl flex items-center gap-1.5 transition-all active:scale-[0.98] shadow-2xs cursor-pointer ${
+            className={`relative font-semibold text-[11px] sm:text-xs px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg flex items-center gap-1 transition-all active:scale-[0.98] shadow-2xs cursor-pointer whitespace-nowrap ${
               isDarkMode 
                 ? 'bg-slate-800 border border-slate-700 text-amber-300 hover:bg-slate-700' 
                 : 'bg-amber-50 hover:bg-amber-100/80 text-[#8b4513] border border-amber-200/80'
             }`}
             title="View Held Bills"
           >
-            <PauseCircle className="w-4 h-4 text-amber-500" />
+            <PauseCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
             <span>Hold Bills</span>
             {heldBillsCount > 0 && (
-              <span className="bg-[#8b4513] text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full min-w-[18px] text-center">
+              <span className="bg-[#8b4513] text-white text-[9px] font-bold px-1.5 py-0.2 rounded-full min-w-[16px] text-center">
                 {heldBillsCount}
               </span>
             )}
@@ -168,7 +168,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Create Bill Button */}
         <button
           onClick={onCreateBill}
-          className="bg-[#f97316] hover:bg-orange-600 text-white font-medium text-xs px-3.5 py-2 rounded-xl shadow-sm transition-all duration-200 active:scale-[0.98] cursor-pointer"
+          className="bg-[#f97316] hover:bg-orange-600 text-white font-semibold text-[11px] sm:text-xs px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-sm transition-all duration-200 active:scale-[0.98] cursor-pointer whitespace-nowrap"
         >
           Create Bill
         </button>
