@@ -92,7 +92,7 @@ export const ManageCategoriesPage: React.FC<ManageCategoriesPageProps> = ({
   };
 
   // Handle Delete Category
-  const handleDeleteCategory = (catName: string, isCustom: boolean) => {
+  const handleDeleteCategory = (catName: string) => {
     if (confirm(`Are you sure you want to delete category "${catName}"?`)) {
       const updated = customCategories.filter(c => c.toLowerCase() !== catName.toLowerCase());
       setCustomCategories(updated);
@@ -274,7 +274,7 @@ export const ManageCategoriesPage: React.FC<ManageCategoriesPageProps> = ({
                           </td>
                           <td className="py-3.5 px-3 text-right">
                             <button
-                              onClick={() => handleDeleteCategory(cat.name, cat.isCustom)}
+                              onClick={() => handleDeleteCategory(cat.name)}
                               className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition cursor-pointer"
                               title={`Delete Category ${cat.name}`}
                             >

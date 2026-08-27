@@ -31,8 +31,6 @@ export interface HeldBill {
   grandTotal: number;
 }
 
-const categories = ['All', 'Beverage', 'Snacks', 'Fast Food', 'Juices', 'Desserts'] as const;
-
 interface POSPageProps {
   onNavigate?: (tab: string) => void;
   isDarkMode?: boolean;
