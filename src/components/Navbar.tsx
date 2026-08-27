@@ -207,15 +207,23 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div 
                       key={idx} 
                       onClick={handleNotificationClick}
-                      className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs space-y-1 cursor-pointer hover:bg-amber-500/20 hover:border-amber-500/50 transition-all duration-150 active:scale-[0.99]"
+                      className={`p-3 rounded-xl text-xs space-y-1.5 cursor-pointer transition-all duration-150 active:scale-[0.99] border ${
+                        isDarkMode 
+                          ? 'bg-slate-900/90 border-slate-700 hover:bg-slate-900 text-white' 
+                          : 'bg-amber-50/90 border-amber-200/90 hover:bg-amber-100/90 text-black'
+                      }`}
                       title="Click to view in Orders Page"
                     >
-                      <div className="flex items-center justify-between font-bold text-amber-600">
-                        <span>⚠️ Order {alert.code}</span>
-                        <span className="text-[10px] text-red-500 font-extrabold">{alert.gapText || "1 Day Gap"}</span>
+                      <div className="flex items-center justify-between font-bold">
+                        <span className={isDarkMode ? 'text-amber-400' : 'text-amber-800'}>⚠️ Order {alert.code}</span>
+                        <span className="text-[10px] text-red-600 font-extrabold">{alert.gapText || "1 Day Gap"}</span>
                       </div>
-                      <p className="font-semibold text-gray-800 dark:text-slate-200">{alert.customer}</p>
-                      <p className="text-[11px] text-gray-500 dark:text-slate-400">Event Date: {alert.date}</p>
+                      <p className={`font-black text-sm tracking-tight ${isDarkMode ? 'text-white' : 'text-black'}`} style={{ color: isDarkMode ? '#ffffff' : '#000000' }}>
+                        {alert.customer}
+                      </p>
+                      <p className={`text-xs font-bold ${isDarkMode ? 'text-slate-300' : 'text-black'}`} style={{ color: isDarkMode ? '#cbd5e1' : '#000000' }}>
+                        Event Date: {alert.date}
+                      </p>
                     </div>
                   ))}
                 </div>

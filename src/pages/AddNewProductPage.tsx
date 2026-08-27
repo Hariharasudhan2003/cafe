@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
   ImagePlus, 
   Save, 
-  CheckCircle2 
+  CheckCircle2,
+  Tag,
+  X
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { Navbar } from '../components/Navbar';
@@ -26,12 +28,60 @@ export const AddNewProductPage: React.FC<AddNewProductPageProps> = ({
 
   // Form State
   const [productName, setProductName] = useState<string>('');
-  const [category, setCategory] = useState<ProductItem['category'] | ''>('');
+  const [category, setCategory] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [price, setPrice] = useState<string>('');
   const [gst, setGst] = useState<string>('0');
   const [imageUrl, setImageUrl] = useState<string>('');
   const [isActive, setIsActive] = useState<boolean>(true);
+
+  // Category Modal State
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState<boolean>(false);
+  const [newCategoryName, setNewCategoryName] = useState<string>('');
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('cafe_custom_categories');
+      if (saved) {
+        setCustomCategories(JSON.parse(saved));
+      }
+    } catch (e) {}
+  }, []);
+
+  const allCategoryOptions = React.useMemo(() => {
+    const base = ['Beverage', 'Snacks', 'Fast Food', 'Juices', 'Desserts'];
+    const combined = [...base, ...customCategories];
+    const unique: string[] = [];
+    combined.forEach(c => {
+      if (c && !unique.some(u => u.toLowerCase() === c.toLowerCase())) {
+        unique.push(c);
+      }
+    });
+    return unique;
+  }, [customCategories]);
+
+  const handleSaveNewCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) return;
+
+    if (!allCategoryOptions.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
+      const updated = [...customCategories, trimmed];
+      setCustomCategories(updated);
+      try {
+        localStorage.setItem('cafe_custom_categories', JSON.stringify(updated));
+      } catch (e) {}
+      setCategory(trimmed);
+      showToast(`Category "${trimmed}" added and selected!`);
+    } else {
+      setCategory(trimmed);
+      showToast(`Category "${trimmed}" selected.`);
+    }
+
+    setNewCategoryName('');
+    setIsCategoryModalOpen(false);
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -186,9 +236,18 @@ export const AddNewProductPage: React.FC<AddNewProductPageProps> = ({
 
                 {/* Category */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                    Category <span className="text-rose-500">*</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-gray-700">
+                      Category <span className="text-rose-500">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsCategoryModalOpen(true)}
+                      className="text-amber-600 hover:underline text-[11px] font-bold cursor-pointer"
+                    >
+                      + New Category
+                    </button>
+                  </div>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value as any)}
@@ -196,11 +255,9 @@ export const AddNewProductPage: React.FC<AddNewProductPageProps> = ({
                     className="w-full bg-slate-50/60 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-700 outline-none focus:bg-white focus:border-amber-500 cursor-pointer shadow-2xs"
                   >
                     <option value="" disabled>Select Category</option>
-                    <option value="Beverage">Beverage</option>
-                    <option value="Snacks">Snacks</option>
-                    <option value="Fast Food">Fast Food</option>
-                    <option value="Juices">Juices</option>
-                    <option value="Desserts">Desserts</option>
+                    {allCategoryOptions.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -341,6 +398,74 @@ export const AddNewProductPage: React.FC<AddNewProductPageProps> = ({
 
         </main>
       </div>
+
+      {/* Add New Category Modal */}
+      {isCategoryModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white text-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6 border border-gray-100 relative">
+            
+            <button
+              onClick={() => setIsCategoryModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-gray-100 transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/30 flex items-center justify-center font-bold">
+                <Tag className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">
+                  Add New Category
+                </h3>
+                <span className="text-xs text-gray-500">
+                  Create a menu category for products & POS billing
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveNewCategory} className="space-y-4 my-4">
+              <div>
+                <label className="block text-xs font-semibold mb-1.5 text-gray-700">
+                  Category Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Ice Creams, Shakes, Biryani..."
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-900 bg-slate-50 focus:bg-white focus:border-amber-500 outline-none transition"
+                  autoFocus
+                />
+              </div>
+
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-xs text-amber-800">
+                💡 <span className="font-semibold">Note:</span> Added category will immediately select here & show up in POS Billing category pills.
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCategoryModalOpen(false)}
+                  className="flex-1 font-semibold py-2.5 rounded-xl text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition cursor-pointer"
+                >
+                  Save Category
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

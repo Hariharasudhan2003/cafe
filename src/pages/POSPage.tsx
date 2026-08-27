@@ -31,7 +31,7 @@ export interface HeldBill {
   grandTotal: number;
 }
 
-const categories = ['All', 'Beverage', 'Snacks', 'Juice', 'Desserts'] as const;
+const categories = ['All', 'Beverage', 'Snacks', 'Fast Food', 'Juices', 'Desserts'] as const;
 
 interface POSPageProps {
   onNavigate?: (tab: string) => void;
@@ -54,12 +54,31 @@ export const POSPage: React.FC<POSPageProps> = ({
 }) => {
   // State
   const [products, setProducts] = useState<Product[]>([]);
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [deletedCategories, setDeletedCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'UPI'>('Cash');
   const [customerName, setCustomerName] = useState<string>('Walk-in Customer');
   const [activeSidebarTab, setActiveSidebarTab] = useState<string>('POS Billing');
   const [activeNavbarView, setActiveNavbarView] = useState<string>('POS');
+
+  const allCategoryOptions = React.useMemo(() => {
+    const base = ['Beverage', 'Snacks', 'Fast Food', 'Juices', 'Desserts'];
+    const prodCats = products.map(p => p.category).filter(Boolean);
+    const combined = [...base, ...customCategories, ...prodCats];
+    const unique: string[] = ['All'];
+    combined.forEach(c => {
+      if (
+        c && 
+        !unique.some(u => u.toLowerCase() === c.toLowerCase()) &&
+        !deletedCategories.some(d => d.toLowerCase() === c.toLowerCase())
+      ) {
+        unique.push(c);
+      }
+    });
+    return unique;
+  }, [products, customCategories, deletedCategories]);
   
   // Receipt Thermal Print Modal State
   const [activeReceipt, setActiveReceipt] = useState<ReceiptData | null>(null);
@@ -164,6 +183,17 @@ export const POSPage: React.FC<POSPageProps> = ({
 
   // Fetch live products, held bills, and cafe settings from backend database
   useEffect(() => {
+    try {
+      const savedCustom = localStorage.getItem('cafe_custom_categories');
+      if (savedCustom) {
+        setCustomCategories(JSON.parse(savedCustom));
+      }
+      const savedDeleted = localStorage.getItem('cafe_deleted_categories');
+      if (savedDeleted) {
+        setDeletedCategories(JSON.parse(savedDeleted));
+      }
+    } catch (e) {}
+
     apiGetSettings()
       .then((data) => { if (data) setCafeSettings(data); })
       .catch(() => {});
@@ -172,23 +202,10 @@ export const POSPage: React.FC<POSPageProps> = ({
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           const formatted: Product[] = data.map((p: any) => {
-            const nameLower = (p.name || '').toLowerCase();
-            const catLower = (p.category || '').toLowerCase();
-            let resolvedCat = p.category;
-            if (catLower.includes('beverage') || catLower.includes('tea') || catLower.includes('coffee') ||
-                nameLower.includes('tea') || nameLower.includes('coffee') || nameLower.includes('chai') || nameLower.includes('latte') || nameLower.includes('espresso')) {
-              resolvedCat = 'Beverage';
-            } else if (catLower.includes('juice') || nameLower.includes('juice')) {
-              resolvedCat = 'Juice';
-            } else if (catLower.includes('dessert') || catLower.includes('cake') || nameLower.includes('cake') || nameLower.includes('ice cream')) {
-              resolvedCat = 'Desserts';
-            } else if (catLower.includes('snack') || catLower.includes('fast food') || nameLower.includes('puff') || nameLower.includes('samosa') || nameLower.includes('burger') || nameLower.includes('pizza') || nameLower.includes('sandwich')) {
-              resolvedCat = 'Snacks';
-            }
             return {
               id: p._id || p.code || `p_${Date.now()}`,
               name: p.name,
-              category: resolvedCat,
+              category: p.category || 'Snacks',
               price: p.price,
               stock: p.stock || 'infinity',
               status: p.status || 'Active',
@@ -420,24 +437,31 @@ export const POSPage: React.FC<POSPageProps> = ({
     }
   };
 
+
+
   // Filtered Products (Active products only)
   const filteredProducts = products.filter((p) => {
     const isActive = p.status === undefined || p.status === 'Active' || (p.status as string) === 'active';
     const catLower = (p.category || '').toLowerCase();
     const nameLower = (p.name || '').toLowerCase();
+    const selCatLower = selectedCategory.toLowerCase();
 
     let matchesCategory = selectedCategory === 'All';
     if (!matchesCategory) {
-      if (selectedCategory === 'Beverage') {
-        matchesCategory = (p.category as string) === 'Beverage' || catLower.includes('beverage') || catLower.includes('tea') || catLower.includes('coffee') || nameLower.includes('tea') || nameLower.includes('coffee');
-      } else if (selectedCategory === 'Juice') {
-        matchesCategory = p.category === 'Juice' || catLower.includes('juice') || nameLower.includes('juice');
-      } else if (selectedCategory === 'Desserts') {
-        matchesCategory = (p.category as string) === 'Desserts' || catLower.includes('dessert') || nameLower.includes('cake') || nameLower.includes('ice cream');
-      } else if (selectedCategory === 'Snacks') {
-        matchesCategory = p.category === 'Snacks' || catLower.includes('snack') || catLower.includes('fast food') || nameLower.includes('puff') || nameLower.includes('samosa') || nameLower.includes('burger') || nameLower.includes('pizza');
+      if (selCatLower === 'beverage' || selCatLower === 'beverages') {
+        matchesCategory = catLower.includes('beverage') || catLower.includes('tea') || catLower.includes('coffee') || nameLower.includes('tea') || nameLower.includes('coffee') || nameLower.includes('chai');
+      } else if (selCatLower === 'juice' || selCatLower === 'juices') {
+        matchesCategory = catLower.includes('juice') || nameLower.includes('juice');
+      } else if (selCatLower === 'cool drinks' || selCatLower === 'cool drink') {
+        matchesCategory = catLower.includes('cool drink') || catLower.includes('soda') || nameLower.includes('soda') || nameLower.includes('drink');
+      } else if (selCatLower === 'fast food') {
+        matchesCategory = catLower.includes('fast food') || nameLower.includes('burger') || nameLower.includes('pizza') || nameLower.includes('sandwich');
+      } else if (selCatLower === 'desserts' || selCatLower === 'dessert') {
+        matchesCategory = catLower.includes('dessert') || nameLower.includes('cake') || nameLower.includes('ice cream') || nameLower.includes('donut') || nameLower.includes('brownie');
+      } else if (selCatLower === 'snacks' || selCatLower === 'snack') {
+        matchesCategory = catLower.includes('snack') || nameLower.includes('puff') || nameLower.includes('samosa') || nameLower.includes('vadai');
       } else {
-        matchesCategory = p.category === selectedCategory;
+        matchesCategory = catLower === selCatLower || catLower.includes(selCatLower);
       }
     }
 
@@ -520,7 +544,7 @@ export const POSPage: React.FC<POSPageProps> = ({
 
             {/* Category Filter Pills */}
             <div className="flex items-center gap-2.5 overflow-x-auto pb-1 scrollbar-none">
-              {categories.map((cat) => {
+              {allCategoryOptions.map((cat) => {
                 const isActive = selectedCategory === cat;
                 return (
                   <button
@@ -529,7 +553,7 @@ export const POSPage: React.FC<POSPageProps> = ({
                     className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all whitespace-nowrap cursor-pointer ${
                       isActive
                         ? 'bg-[#f97316] text-white shadow-sm font-semibold'
-                        : 'bg-[#edf2f7] text-gray-700 hover:bg-gray-200'
+                        : 'bg-[#edf2f7] text-gray-700 hover:bg-gray-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'
                     }`}
                   >
                     {cat}
@@ -838,11 +862,9 @@ export const POSPage: React.FC<POSPageProps> = ({
                     onChange={(e) => setNewProductCategory(e.target.value as any)}
                     className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:border-amber-500 outline-none bg-white"
                   >
-                    <option value="Tea">Tea</option>
-                    <option value="Coffee">Coffee</option>
-                    <option value="Juice">Juice</option>
-                    <option value="Cool Drinks">Cool Drinks</option>
-                    <option value="Snacks">Snacks</option>
+                    {allCategoryOptions.filter(c => c !== 'All').map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
                   </select>
                 </div>
 

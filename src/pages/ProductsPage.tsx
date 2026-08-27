@@ -7,18 +7,20 @@ import {
   X, 
   ChevronLeft, 
   ChevronRight,
-  CheckCircle2
+  CheckCircle2,
+  Tag
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { Navbar } from '../components/Navbar';
 import { AddNewProductPage } from './AddNewProductPage';
+import { ManageCategoriesPage } from './ManageCategoriesPage';
 import { apiGetProducts, apiDeleteProduct, apiGetSettings, apiUpdateProduct, apiCreateProduct } from '../services/api';
 
 export interface ProductItem {
   id: string;
   code: string;
   name: string;
-  category: 'Beverage' | 'Snacks' | 'Fast Food' | 'Juices' | 'Desserts';
+  category: string;
   price: number;
   gst: number;
   status: 'Active' | 'Inactive';
@@ -28,24 +30,61 @@ export interface ProductItem {
 interface ProductsPageProps {
   onNavigate?: (tab: string) => void;
   isDarkMode?: boolean;
+  cafeName?: string;
+  branchLocation?: string;
+  logoUrl?: string;
 }
 
-export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMode = false }) => {
+export const ProductsPage: React.FC<ProductsPageProps> = ({ 
+  onNavigate, 
+  isDarkMode = false,
+  cafeName: propCafeName,
+  branchLocation: propBranchLocation,
+  logoUrl: propLogoUrl
+}) => {
   const [activeTab, setActiveTab] = useState<string>('Products');
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [isAddMode, setIsAddMode] = useState<boolean>(false);
+  const [isCategoryMode, setIsCategoryMode] = useState<boolean>(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState<boolean>(false);
+  const [newCategoryName, setNewCategoryName] = useState<string>('');
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [deletedCategories, setDeletedCategories] = useState<string[]>([]);
   const [globalGst, setGlobalGst] = useState<number>(18);
   const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  const [cafeSettings, setCafeSettings] = useState({
+    cafeName: propCafeName || 'BrewMaster',
+    branchLocation: propBranchLocation || 'Downtown Branch',
+    logoUrl: propLogoUrl || ''
+  });
+
+  useEffect(() => {
+    setCafeSettings((prev) => ({
+      ...prev,
+      cafeName: propCafeName || prev.cafeName,
+      branchLocation: propBranchLocation || prev.branchLocation,
+      logoUrl: propLogoUrl !== undefined ? propLogoUrl : prev.logoUrl
+    }));
+  }, [propCafeName, propBranchLocation, propLogoUrl]);
+
   useEffect(() => {
     apiGetSettings()
       .then((settings) => {
-        if (settings && settings.globalGst !== undefined) {
-          setGlobalGst(settings.globalGst);
+        if (settings) {
+          if (settings.globalGst !== undefined) {
+            setGlobalGst(settings.globalGst);
+          }
+          setCafeSettings((prev) => ({
+            ...prev,
+            cafeName: settings.cafeName || prev.cafeName,
+            branchLocation: settings.branchLocation || prev.branchLocation,
+            logoUrl: settings.logoUrl !== undefined ? settings.logoUrl : prev.logoUrl
+          }));
         }
       })
       .catch(() => {});
@@ -70,7 +109,78 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
         }
       })
       .catch((err) => console.log('Products API load:', err));
+
+    try {
+      const saved = localStorage.getItem('cafe_custom_categories');
+      if (saved) {
+        setCustomCategories(JSON.parse(saved));
+      }
+      const savedDeleted = localStorage.getItem('cafe_deleted_categories');
+      if (savedDeleted) {
+        setDeletedCategories(JSON.parse(savedDeleted));
+      }
+    } catch (e) {}
   }, []);
+
+  const allCategoryOptions = React.useMemo(() => {
+    const base = ['Beverage', 'Snacks', 'Fast Food', 'Juices', 'Desserts'];
+    const dbCats = products.map(p => p.category).filter(Boolean);
+    const combined = [...base, ...customCategories, ...dbCats];
+    const unique: string[] = [];
+    combined.forEach(c => {
+      if (
+        c && 
+        !unique.some(u => u.toLowerCase() === c.toLowerCase()) &&
+        !deletedCategories.some(d => d.toLowerCase() === c.toLowerCase())
+      ) {
+        unique.push(c);
+      }
+    });
+    return unique;
+  }, [products, customCategories, deletedCategories]);
+
+  const handleSaveNewCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) return;
+
+    if (deletedCategories.some(d => d.toLowerCase() === trimmed.toLowerCase())) {
+      const updatedDeleted = deletedCategories.filter(d => d.toLowerCase() !== trimmed.toLowerCase());
+      setDeletedCategories(updatedDeleted);
+      try {
+        localStorage.setItem('cafe_deleted_categories', JSON.stringify(updatedDeleted));
+      } catch (e) {}
+    }
+
+    if (!allCategoryOptions.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
+      const updated = [...customCategories, trimmed];
+      setCustomCategories(updated);
+      try {
+        localStorage.setItem('cafe_custom_categories', JSON.stringify(updated));
+      } catch (e) {}
+      showToast(`Category "${trimmed}" added successfully!`);
+    } else {
+      showToast(`Category "${trimmed}" already exists.`);
+    }
+
+    setNewCategoryName('');
+  };
+
+  const handleDeleteCategory = (catToDelete: string) => {
+    const updatedCustom = customCategories.filter(c => c.toLowerCase() !== catToDelete.toLowerCase());
+    setCustomCategories(updatedCustom);
+    try {
+      localStorage.setItem('cafe_custom_categories', JSON.stringify(updatedCustom));
+    } catch (e) {}
+
+    const updatedDeleted = Array.from(new Set([...deletedCategories, catToDelete]));
+    setDeletedCategories(updatedDeleted);
+    try {
+      localStorage.setItem('cafe_deleted_categories', JSON.stringify(updatedDeleted));
+    } catch (e) {}
+
+    showToast(`Category "${catToDelete}" deleted successfully!`);
+  };
 
   // Form State
   const [formData, setFormData] = useState({
@@ -97,6 +207,17 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
           setIsAddMode(false);
           showToast(`Added "${newProd.name}" to menu catalog!`);
         }}
+      />
+    );
+  }
+
+  if (isCategoryMode) {
+    return (
+      <ManageCategoriesPage
+        onNavigate={onNavigate}
+        onBack={() => setIsCategoryMode(false)}
+        isDarkMode={isDarkMode}
+        products={products}
       />
     );
   }
@@ -244,6 +365,9 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
         activeTab={activeTab}
         onTabChange={handleTabChange}
         onNewOrder={() => handleTabChange('POS Billing')}
+        cafeName={cafeSettings.cafeName}
+        branchLocation={cafeSettings.branchLocation}
+        logoUrl={cafeSettings.logoUrl}
       />
 
       {/* Main Container */}
@@ -254,6 +378,8 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
           onViewChange={(view) => handleTabChange(view)}
           onCreateBill={() => handleTabChange('POS Billing')}
           isDarkMode={isDarkMode}
+          cafeName={cafeSettings.cafeName}
+          logoUrl={cafeSettings.logoUrl}
         />
 
         {/* Toast Alert */}
@@ -288,6 +414,15 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
                   }`}
                 />
               </div>
+
+              {/* Add Category Button */}
+              <button
+                onClick={() => setIsCategoryModalOpen(true)}
+                className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 shadow-sm transition-all active:scale-[0.98] cursor-pointer"
+              >
+                <Tag className="w-4 h-4 stroke-[2.5]" />
+                <span>Add Category</span>
+              </button>
 
               {/* Add New Product Button */}
               <button
@@ -518,9 +653,18 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
-                    Category
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className={`block text-xs font-semibold ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
+                      Category
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsCategoryModalOpen(true)}
+                      className="text-amber-600 hover:underline text-[11px] font-bold cursor-pointer"
+                    >
+                      + New Category
+                    </button>
+                  </div>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
@@ -528,12 +672,9 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
                       isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-200 text-gray-800'
                     }`}
                   >
-                    <option value="Beverages">Beverages</option>
-                    <option value="Juices">Juices</option>
-                    <option value="Cool Drinks">Cool Drinks</option>
-                    <option value="Snacks">Snacks</option>
-                    <option value="Fast Food">Fast Food</option>
-                    <option value="Desserts">Desserts</option>
+                    {allCategoryOptions.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -623,6 +764,119 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNavigate, isDarkMo
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add New Category Modal */}
+      {isCategoryModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className={`${isDarkMode ? 'bg-[#1e293b] text-white border-slate-800' : 'bg-white text-gray-900 border-gray-100'} rounded-2xl shadow-2xl w-full max-w-md p-6 border relative max-h-[90vh] flex flex-col justify-between`}>
+            
+            <div>
+              <button
+                onClick={() => setIsCategoryModalOpen(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/30 flex items-center justify-center font-bold">
+                  <Tag className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Manage Categories
+                  </h3>
+                  <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
+                    Add new categories & delete existing ones
+                  </span>
+                </div>
+              </div>
+
+              <form onSubmit={handleSaveNewCategory} className="mb-4">
+                <label className="block text-xs font-semibold mb-1.5 text-gray-700 dark:text-slate-300">
+                  Category Name <span className="text-rose-500">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Ice Creams, Shakes, Biryani..."
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    className={`flex-1 border rounded-xl px-4 py-2.5 text-sm font-medium focus:border-amber-500 outline-none transition ${
+                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-slate-50 border-gray-200 text-gray-900'
+                    }`}
+                    autoFocus
+                  />
+                  <button
+                    type="submit"
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2.5 rounded-xl text-sm shadow-md transition cursor-pointer flex items-center gap-1.5 shrink-0"
+                  >
+                    <Plus className="w-4 h-4" /> Save
+                  </button>
+                </div>
+              </form>
+
+              {/* Added Category List */}
+              <div className="my-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
+                    Category List ({allCategoryOptions.length})
+                  </span>
+                </div>
+                <div className={`max-h-48 overflow-y-auto space-y-1.5 pr-1 rounded-xl p-2 border ${
+                  isDarkMode ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50/80 border-gray-100'
+                }`}>
+                  {allCategoryOptions.length === 0 ? (
+                    <p className="text-xs text-center py-4 text-gray-400">No categories found.</p>
+                  ) : (
+                    allCategoryOptions.map((cat) => (
+                      <div
+                        key={cat}
+                        className={`flex items-center justify-between p-2.5 rounded-xl text-sm transition ${
+                          isDarkMode 
+                            ? 'bg-slate-800/90 hover:bg-slate-800 text-slate-200 border border-slate-700/60' 
+                            : 'bg-white hover:bg-gray-50 text-gray-800 border border-gray-100 shadow-2xs'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Tag className="w-3.5 h-3.5 text-amber-500" />
+                          <span className="font-semibold text-xs">{cat}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCategory(cat)}
+                          title={`Delete ${cat}`}
+                          className="p-1.5 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-xs text-amber-700 dark:text-amber-300 my-3">
+                💡 <span className="font-semibold">Note:</span> Categories will immediately show up in Product forms & POS Billing category pills.
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setIsCategoryModalOpen(false)}
+                className={`w-full font-semibold py-2.5 rounded-xl text-sm transition cursor-pointer ${
+                  isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                }`}
+              >
+                Close
+              </button>
+            </div>
+
           </div>
         </div>
       )}

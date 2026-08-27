@@ -56,11 +56,35 @@ function App() {
   const renderCurrentView = () => {
     switch (currentTab) {
       case 'Dashboard':
-        return <DashboardPage onNavigate={(tab) => setCurrentTab(tab)} isDarkMode={isDarkMode} />;
+        return (
+          <DashboardPage 
+            onNavigate={(tab) => setCurrentTab(tab)} 
+            isDarkMode={isDarkMode}
+            cafeName={globalSettings.cafeName}
+            branchLocation={globalSettings.branchLocation}
+            logoUrl={globalSettings.logoUrl}
+          />
+        );
       case 'Products':
-        return <ProductsPage onNavigate={(tab) => setCurrentTab(tab)} isDarkMode={isDarkMode} />;
+        return (
+          <ProductsPage 
+            onNavigate={(tab) => setCurrentTab(tab)} 
+            isDarkMode={isDarkMode}
+            cafeName={globalSettings.cafeName}
+            branchLocation={globalSettings.branchLocation}
+            logoUrl={globalSettings.logoUrl}
+          />
+        );
       case 'Reports':
-        return <ReportsPage onNavigate={(tab) => setCurrentTab(tab)} isDarkMode={isDarkMode} />;
+        return (
+          <ReportsPage 
+            onNavigate={(tab) => setCurrentTab(tab)} 
+            isDarkMode={isDarkMode}
+            cafeName={globalSettings.cafeName}
+            branchLocation={globalSettings.branchLocation}
+            logoUrl={globalSettings.logoUrl}
+          />
+        );
       case 'Orders':
         return (
           <OrdersPage 

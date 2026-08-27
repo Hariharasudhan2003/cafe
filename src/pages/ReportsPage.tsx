@@ -20,13 +20,22 @@ import { apiGetBills, apiGetOrders, apiGetSettings } from '../services/api';
 interface ReportsPageProps {
   onNavigate?: (tab: string, extraData?: any) => void;
   isDarkMode?: boolean;
+  cafeName?: string;
+  branchLocation?: string;
+  logoUrl?: string;
 }
 
-export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode = false }) => {
+export const ReportsPage: React.FC<ReportsPageProps> = ({ 
+  onNavigate, 
+  isDarkMode = false,
+  cafeName: propCafeName,
+  branchLocation: propBranchLocation,
+  logoUrl: propLogoUrl
+}) => {
   const [activeTab, setActiveTab] = useState<string>('Reports');
   const [showAllPosItems, setShowAllPosItems] = useState<boolean>(false);
   const [showAllOrders, setShowAllOrders] = useState<boolean>(false);
-  const [timeRange, setTimeRange] = useState<'Today' | 'This Week' | 'Monthly'>('Today');
+  const [timeRange, setTimeRange] = useState<'Today' | 'This Week' | 'Monthly' | 'All Time'>('Today');
 
   // Order Detail Modal State on Reports Page
   const [selectedOrderModal, setSelectedOrderModal] = useState<any>(null);
@@ -40,10 +49,23 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
 
   const [bills, setBills] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
-  const [cafeSettings, setCafeSettings] = useState({ cafeName: 'BrewMaster', branchLocation: 'Downtown Branch', logoUrl: '' });
+  const [cafeSettings, setCafeSettings] = useState({
+    cafeName: propCafeName || 'BrewMaster',
+    branchLocation: propBranchLocation || 'Downtown Branch',
+    logoUrl: propLogoUrl || ''
+  });
 
   useEffect(() => {
-    apiGetSettings().then(data => { if (data) setCafeSettings(data); }).catch(() => {});
+    setCafeSettings((prev) => ({
+      ...prev,
+      cafeName: propCafeName || prev.cafeName,
+      branchLocation: propBranchLocation || prev.branchLocation,
+      logoUrl: propLogoUrl !== undefined ? propLogoUrl : prev.logoUrl
+    }));
+  }, [propCafeName, propBranchLocation, propLogoUrl]);
+
+  useEffect(() => {
+    apiGetSettings().then(data => { if (data) setCafeSettings(prev => ({ ...prev, ...data })); }).catch(() => {});
 
     Promise.all([
       apiGetBills().catch(() => []),
@@ -61,9 +83,10 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
     }
   };
 
-  // Helper date filtering function based on Today, This Week, Monthly
-  const isDateInTimeRange = (dateStr: string) => {
-    if (!dateStr) return true;
+  // Helper date filtering function based on Today, This Week, Monthly, All Time (1 Year Data)
+  const isDateInTimeRange = (item: any) => {
+    const rawDateStr = typeof item === 'string' ? item : (item?.date || item?.createdAt || item?.eventDate);
+    if (!rawDateStr) return false;
 
     const now = new Date();
     const todayYear = now.getFullYear();
@@ -71,7 +94,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
     const todayDate = now.getDate();
 
     let itemDate: Date | null = null;
-    const lower = dateStr.toLowerCase().trim();
+    const lower = rawDateStr.toLowerCase().trim();
 
     if (lower === 'today') {
       itemDate = now;
@@ -79,11 +102,11 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
       const parts = lower.split('T')[0].split('-');
       itemDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
     } else {
-      const parsed = new Date(dateStr);
+      const parsed = new Date(rawDateStr);
       if (!isNaN(parsed.getTime())) itemDate = parsed;
     }
 
-    if (!itemDate) return true;
+    if (!itemDate) return false;
 
     if (timeRange === 'Today') {
       return (
@@ -107,12 +130,16 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
       return inCurrentWeek || in7DaysRange;
     } else if (timeRange === 'Monthly') {
       return itemDate.getMonth() === todayMonth && itemDate.getFullYear() === todayYear;
+    } else if (timeRange === 'All Time') {
+      // Filter last 1 year (365 days) data strictly
+      const oneYearAgo = new Date(todayYear - 1, todayMonth, todayDate, 0, 0, 0, 0);
+      return itemDate >= oneYearAgo;
     }
     return true;
   };
 
-  const filteredBills = bills.filter((b: any) => isDateInTimeRange(b.date || b.createdAt));
-  const filteredOrders = orders.filter((o: any) => isDateInTimeRange(o.eventDate || o.createdAt));
+  const filteredBills = bills.filter((b: any) => isDateInTimeRange(b));
+  const filteredOrders = orders.filter((o: any) => isDateInTimeRange(o));
 
   // Dynamic Calculated Metrics for Top 4 Cards
   const posSalesVal = filteredBills.reduce((sum: number, b: any) => sum + (b.grandTotal || b.amount || 0), 0);
@@ -121,8 +148,9 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
   const totalCombinedSales = posSalesVal + orderRevenueVal;
   const netProfitVal = Math.round(totalCombinedSales * 0.40); // 40% Estimated Profit Margin
 
-  // Top Selling Items from live filtered bills
+  // Top Selling Items from live filtered bills AND orders
   const itemQuantities: Record<string, { qty: number; totalPrice: number }> = {};
+
   filteredBills.forEach((b: any) => {
     if (Array.isArray(b.items)) {
       b.items.forEach((i: any) => {
@@ -136,6 +164,25 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
         itemQuantities[name].totalPrice += (qty * price);
       });
     }
+  });
+
+  filteredOrders.forEach((o: any) => {
+    const orderItemsList = Array.isArray(o.orderItems) && o.orderItems.length > 0
+      ? o.orderItems
+      : (Array.isArray(o.itemDetails) ? o.itemDetails : []);
+
+    orderItemsList.forEach((i: any) => {
+      const name = i.name || i.product?.name || 'Item';
+      const qty = i.qty || i.quantity || 1;
+      const price = i.price || i.unitPrice || 0;
+      const total = i.total || (qty * price);
+
+      if (!itemQuantities[name]) {
+        itemQuantities[name] = { qty: 0, totalPrice: 0 };
+      }
+      itemQuantities[name].qty += qty;
+      itemQuantities[name].totalPrice += total;
+    });
   });
 
   const topItemsListAll = Object.entries(itemQuantities)
@@ -236,7 +283,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ onNavigate, isDarkMode
               <div className={`flex items-center p-1 rounded-xl text-xs font-medium border ${
                 isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-200/60'
               }`}>
-                {(['Today', 'This Week', 'Monthly'] as const).map((range) => (
+                {(['Today', 'This Week', 'Monthly', 'All Time'] as const).map((range) => (
                   <button
                     key={range}
                     onClick={() => setTimeRange(range)}

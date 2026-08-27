@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  TrendingUp, 
   Receipt, 
   ShoppingBag, 
   Package, 
   Wallet, 
   Eye, 
   X, 
-  Printer 
+  Printer,
+  ChevronRight,
+  Search,
+  Award,
+  BarChart3
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { Navbar } from '../components/Navbar';
@@ -27,40 +30,92 @@ interface Bill {
 interface DashboardPageProps {
   onNavigate?: (tab: string) => void;
   isDarkMode?: boolean;
+  cafeName?: string;
+  branchLocation?: string;
+  logoUrl?: string;
 }
 
-export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDarkMode = false }) => {
+export const DashboardPage: React.FC<DashboardPageProps> = ({ 
+  onNavigate, 
+  isDarkMode = false,
+  cafeName: propCafeName,
+  branchLocation: propBranchLocation,
+  logoUrl: propLogoUrl
+}) => {
   const [activeTab, setActiveTab] = useState<string>('Dashboard');
   const [timeFilter, setTimeFilter] = useState<'Today' | 'Week' | 'Month' | 'All'>('Today');
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
   const [showAllBills, setShowAllBills] = useState<boolean>(false);
+  const [showAllTopItems] = useState<boolean>(false);
+  const [showTopItemsModal, setShowTopItemsModal] = useState<boolean>(false);
+  const [topItemsSearch, setTopItemsSearch] = useState<string>('');
+  const [topItemsCategoryFilter, setTopItemsCategoryFilter] = useState<string>('All');
   const [bills, setBills] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [productsCount, setProductsCount] = useState<number>(0);
-  const [cafeSettings, setCafeSettings] = useState({ cafeName: 'BrewMaster', branchLocation: 'Downtown Branch', logoUrl: '' });
+  const [fetchedProducts, setFetchedProducts] = useState<any[]>([]);
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [deletedCategories, setDeletedCategories] = useState<string[]>([]);
+  const [cafeSettings, setCafeSettings] = useState({
+    cafeName: propCafeName || 'BrewMaster',
+    branchLocation: propBranchLocation || 'Downtown Branch',
+    logoUrl: propLogoUrl || ''
+  });
 
   useEffect(() => {
-    apiGetSettings().then(data => { if (data) setCafeSettings(data); }).catch(() => {});
+    setCafeSettings((prev) => ({
+      ...prev,
+      cafeName: propCafeName || prev.cafeName,
+      branchLocation: propBranchLocation || prev.branchLocation,
+      logoUrl: propLogoUrl !== undefined ? propLogoUrl : prev.logoUrl
+    }));
+  }, [propCafeName, propBranchLocation, propLogoUrl]);
+
+  useEffect(() => {
+    try {
+      const savedCustom = localStorage.getItem('cafe_custom_categories');
+      if (savedCustom) setCustomCategories(JSON.parse(savedCustom));
+      const savedDeleted = localStorage.getItem('cafe_deleted_categories');
+      if (savedDeleted) setDeletedCategories(JSON.parse(savedDeleted));
+    } catch (e) {}
+
+    apiGetSettings().then(data => { if (data) setCafeSettings(prev => ({ ...prev, ...data })); }).catch(() => {});
 
     Promise.all([
       apiGetBills().catch(() => []),
       apiGetOrders().catch(() => []),
       apiGetProducts().catch(() => [])
-    ]).then(([fetchedBills, fetchedOrders, fetchedProducts]) => {
+    ]).then(([fetchedBills, fetchedOrders, validProducts]) => {
       const validBills = Array.isArray(fetchedBills) ? fetchedBills : [];
       const validOrders = Array.isArray(fetchedOrders) ? fetchedOrders : [];
-      const validProducts = Array.isArray(fetchedProducts) ? fetchedProducts : [];
+      const prods = Array.isArray(validProducts) ? validProducts : [];
 
       setBills(validBills);
       setOrders(validOrders);
-      setProductsCount(validProducts.filter((p: any) => p.status !== 'Inactive' && p.status !== 'inactive').length);
+      setFetchedProducts(prods);
+      setProductsCount(prods.filter((p: any) => p.status !== 'Inactive' && p.status !== 'inactive').length);
     }).catch(err => console.log('Error fetching dashboard live data:', err));
   }, []);
 
+  const activeCategoriesList = React.useMemo(() => {
+    const base = ['Beverage', 'Snacks', 'Fast Food', 'Juices', 'Desserts'];
+    const prodCats = fetchedProducts.map((p: any) => p.category).filter(Boolean);
+    const combined = [...base, ...customCategories, ...prodCats];
+    const unique: string[] = [];
+    combined.forEach(c => {
+      if (
+        c && 
+        !unique.some(u => u.toLowerCase() === c.toLowerCase()) &&
+        !deletedCategories.some(d => d.toLowerCase() === c.toLowerCase())
+      ) {
+        unique.push(c);
+      }
+    });
+    return unique;
+  }, [fetchedProducts, customCategories, deletedCategories]);
+
   // Helper time range filter for Dashboard (Today, Week, Month, All Time)
   const isItemInTimeFilter = (item: any, filter: 'Today' | 'Week' | 'Month' | 'All') => {
-    if (filter === 'All') return true;
-
     const now = new Date();
     const todayYear = now.getFullYear();
     const todayMonth = now.getMonth();
@@ -68,7 +123,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
 
     let itemDate: Date | null = null;
 
-    const rawDateStr = item.date || item.eventDate || item.createdAt;
+    const rawDateStr = item.date || item.createdAt || item.eventDate;
     if (!rawDateStr) return false;
 
     if (typeof rawDateStr === 'string') {
@@ -128,6 +183,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
       );
     }
 
+    if (filter === 'All') {
+      // Filter last 1 year (365 days) data strictly
+      const oneYearAgo = new Date(todayYear - 1, todayMonth, todayDate, 0, 0, 0, 0);
+      return itemDate >= oneYearAgo;
+    }
+
     return true;
   };
 
@@ -137,39 +198,109 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
 
   // Dynamic Live Metrics Calculations based on filtered data
   const paidBills = filteredBills.filter((b: any) => b.status === 'Paid' || b.status === 'paid');
-  const billsTotalAmount = filteredBills.reduce((sum, b) => sum + (b.grandTotal || b.amount || 0), 0);
-  const ordersTotalAmount = filteredOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
-  const totalSalesVal = billsTotalAmount + ordersTotalAmount;
   const paidRevenueVal = paidBills.reduce((sum, b) => sum + (b.grandTotal || b.amount || 0), 0) +
     filteredOrders.reduce((sum, o) => sum + (o.advanceReceived || 0), 0);
 
-  // Compute Top Selling Items from live filtered bills
+  // Dynamic Sales by Category Breakdown & Top Selling Items from live filtered bills AND orders
   const itemMap: Record<string, { name: string; category: string; qty: number; revenue: number }> = {};
+  const categoryTotals: Record<string, number> = {};
+  activeCategoriesList.forEach(c => {
+    categoryTotals[c] = 0;
+  });
+
+  const resolveCategoryForItem = (prodCat?: string, name?: string): string => {
+    if (prodCat) {
+      const matched = activeCategoriesList.find(c => c.toLowerCase() === prodCat.toLowerCase());
+      if (matched) return matched;
+    }
+    const n = (name || '').toLowerCase();
+    const c = (prodCat || '').toLowerCase();
+
+    for (const cat of activeCategoriesList) {
+      const catLower = cat.toLowerCase();
+      if (
+        c.includes(catLower) || 
+        catLower.includes(c) ||
+        (catLower.includes('beverage') && (n.includes('tea') || n.includes('coffee') || n.includes('chai') || n.includes('latte'))) ||
+        (catLower.includes('juice') && n.includes('juice')) ||
+        (catLower.includes('snack') && (n.includes('puff') || n.includes('samosa'))) ||
+        (catLower.includes('dessert') && (n.includes('cake') || n.includes('ice cream'))) ||
+        (catLower.includes('fast food') && (n.includes('burger') || n.includes('pizza') || n.includes('sandwich')))
+      ) {
+        return cat;
+      }
+    }
+    return activeCategoriesList[0] || prodCat || 'Snacks';
+  };
+
+  // Process items from filtered POS Bills
   filteredBills.forEach((b: any) => {
     if (Array.isArray(b.items)) {
       b.items.forEach((i: any) => {
         const name = i.product?.name || i.name || 'Item';
-        const cat = i.product?.category || i.category || 'Snacks';
+        const prodCat = i.product?.category || i.category || '';
+        const resolvedCat = resolveCategoryForItem(prodCat, name);
         const qty = i.quantity || 1;
         const rev = (i.unitPrice || i.price || 0) * qty;
+
         if (!itemMap[name]) {
-          itemMap[name] = { name, category: cat, qty: 0, revenue: 0 };
+          itemMap[name] = { name, category: resolvedCat, qty: 0, revenue: 0 };
         }
         itemMap[name].qty += qty;
         itemMap[name].revenue += rev;
+
+        if (categoryTotals[resolvedCat] !== undefined) {
+          categoryTotals[resolvedCat] += rev;
+        } else if (activeCategoriesList.length > 0) {
+          categoryTotals[activeCategoriesList[0]] = (categoryTotals[activeCategoriesList[0]] || 0) + rev;
+        }
       });
     }
   });
 
-  const topItems = Object.values(itemMap)
+  // Process items from filtered Function Orders
+  filteredOrders.forEach((o: any) => {
+    const orderItemsList = Array.isArray(o.orderItems) && o.orderItems.length > 0
+      ? o.orderItems
+      : (Array.isArray(o.itemDetails) ? o.itemDetails : []);
+
+    orderItemsList.forEach((i: any) => {
+      const name = i.name || i.product?.name || 'Item';
+      const prodCat = i.category || i.product?.category || '';
+      const resolvedCat = resolveCategoryForItem(prodCat, name);
+      const qty = i.qty || i.quantity || 1;
+      const rev = i.total || ((i.price || i.unitPrice || 0) * qty);
+
+      if (!itemMap[name]) {
+        itemMap[name] = { name, category: resolvedCat, qty: 0, revenue: 0 };
+      }
+      itemMap[name].qty += qty;
+      itemMap[name].revenue += rev;
+
+      if (categoryTotals[resolvedCat] !== undefined) {
+        categoryTotals[resolvedCat] += rev;
+      } else if (activeCategoriesList.length > 0) {
+        categoryTotals[activeCategoriesList[0]] = (categoryTotals[activeCategoriesList[0]] || 0) + rev;
+      }
+    });
+  });
+
+  const allTopItems = Object.values(itemMap)
     .sort((a, b) => b.qty - a.qty)
-    .slice(0, 5)
     .map(t => ({
       name: t.name,
       category: t.category,
       qty: t.qty,
       revenue: `₹${t.revenue.toLocaleString()}`
     }));
+
+  const visibleTopItems = showAllTopItems ? allTopItems : allTopItems.slice(0, 6);
+
+  const modalFilteredTopItems = allTopItems.filter(item => {
+    const matchesSearch = !topItemsSearch || item.name.toLowerCase().includes(topItemsSearch.toLowerCase());
+    const matchesCategory = topItemsCategoryFilter === 'All' || item.category === topItemsCategoryFilter;
+    return matchesSearch && matchesCategory;
+  });
 
   const formattedBills: Bill[] = filteredBills.map((b: any) => ({
     id: b.billNo || b._id || `#B-${Date.now().toString().slice(-4)}`,
@@ -186,55 +317,24 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
     })) : undefined
   }));
 
-  // Dynamic Sales by Category Breakdown from live filtered bills
-  const categoryTotals: Record<string, number> = {
-    'Beverages': 0,
-    'Snacks': 0,
-    'Fast Food': 0,
-    'Juices': 0,
-    'Cool Drinks': 0,
-    'Desserts': 0
-  };
-
-  const normalizeCategory = (cat?: string, name?: string): string => {
-    const n = (name || '').toLowerCase();
-    const c = (cat || '').toLowerCase();
-    if (c === 'beverages' || c === 'beverage' || c === 'tea' || c === 'coffee' || c === 'tea & coffee' ||
-        n.includes('tea') || n.includes('coffee') || n.includes('chai') || n.includes('latte') || n.includes('espresso') || n.includes('cappuccino')) {
-      return 'Beverages';
-    }
-    if (c === 'juices' || c === 'juice' || n.includes('juice')) return 'Juices';
-    if (c === 'cool drinks' || c === 'cool drink' || n.includes('soda') || n.includes('drink')) return 'Cool Drinks';
-    if (c === 'fast food' || n.includes('burger') || n.includes('pizza') || n.includes('sandwich')) return 'Fast Food';
-    if (c === 'desserts' || c === 'dessert' || n.includes('cake') || n.includes('ice cream')) return 'Desserts';
-    return 'Snacks';
-  };
-
-  filteredBills.forEach((b: any) => {
-    if (Array.isArray(b.items)) {
-      b.items.forEach((i: any) => {
-        const prodName = i.product?.name || i.name || '';
-        const prodCat = i.product?.category || i.category || '';
-        const resolvedCat = normalizeCategory(prodCat, prodName);
-        const rev = (i.unitPrice || i.price || 0) * (i.quantity || 1);
-        if (categoryTotals[resolvedCat] !== undefined) {
-          categoryTotals[resolvedCat] += rev;
-        } else {
-          categoryTotals['Beverages'] += rev;
-        }
-      });
-    }
-  });
-
   const totalCatRev = Object.values(categoryTotals).reduce((a, b) => a + b, 0) || 0;
-  const categoryColors: Record<string, string> = {
-    'Beverages': 'bg-gradient-to-r from-amber-500 to-orange-500',
-    'Snacks': 'bg-amber-700',
-    'Fast Food': 'bg-orange-400',
-    'Juices': 'bg-amber-400',
-    'Cool Drinks': 'bg-sky-400',
-    'Desserts': 'bg-slate-400'
-  };
+  const categoryColorPalette = [
+    'bg-gradient-to-r from-amber-500 to-orange-500',
+    'bg-amber-600',
+    'bg-orange-500',
+    'bg-amber-400',
+    'bg-sky-500',
+    'bg-slate-400',
+    'bg-emerald-500',
+    'bg-rose-500',
+    'bg-purple-500',
+    'bg-teal-500'
+  ];
+
+  const categoryColors: Record<string, string> = {};
+  activeCategoriesList.forEach((cat, idx) => {
+    categoryColors[cat] = categoryColorPalette[idx % categoryColorPalette.length];
+  });
 
   const categoriesData = Object.entries(categoryTotals).map(([name, val]) => {
     const pct = totalCatRev > 0 ? Math.round((val / totalCatRev) * 100) : 0;
@@ -333,27 +433,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
             </div>
           </div>
           
-          {/* Top 5 Stat Cards Section */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            
-            {/* Card 1: Sales */}
-            <div className={`${cardBgClass} rounded-xl p-5 border shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between`}>
-              <div className="flex items-center justify-between">
-                <span className={`text-xs font-semibold tracking-wide ${textSubClass}`}>
-                  {timeFilter === 'Today' ? "Today's Sales" : timeFilter === 'Week' ? "Weekly Sales" : timeFilter === 'Month' ? "Monthly Sales" : "All Sales"}
-                </span>
-                <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
-                  <Receipt className="w-5 h-5" />
-                </div>
-              </div>
-              <div className="mt-3">
-                <h3 className={`text-2xl font-extrabold tracking-tight ${textHeadingClass}`}>₹{totalSalesVal.toLocaleString()}</h3>
-                <div className="flex items-center gap-1 mt-1 text-emerald-500 text-xs font-semibold">
-                  <TrendingUp className="w-3.5 h-3.5" />
-                  <span>Live POS + Orders</span>
-                </div>
-              </div>
-            </div>
+          {/* Top 4 Stat Cards Section */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
             {/* Card 2: Bills */}
             <div className={`${cardBgClass} rounded-xl p-5 border shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between`}>
@@ -541,12 +622,23 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
             {/* Left Box (5 cols): Top Selling Items */}
             <div className={`lg:col-span-5 ${cardBgClass} rounded-2xl p-6 border shadow-2xs flex flex-col justify-between`}>
               
-              <h3 className={`text-base font-bold tracking-tight mb-4 ${textHeadingClass}`}>
-                Top Selling Items
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className={`text-base font-bold tracking-tight ${textHeadingClass}`}>
+                  Top Selling Items
+                </h3>
+                {allTopItems.length > 0 && (
+                  <button 
+                    onClick={() => setShowTopItemsModal(true)}
+                    className="text-xs font-bold text-amber-500 hover:text-amber-600 hover:underline transition cursor-pointer flex items-center gap-1"
+                  >
+                    <span>View More</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
 
               <div className="overflow-x-auto">
-                {topItems.length === 0 ? (
+                {allTopItems.length === 0 ? (
                   <p className={`text-xs py-6 text-center ${textSubClass}`}>
                     No sales recorded {timeFilter === 'Today' ? 'today' : timeFilter === 'Week' ? 'this week' : timeFilter === 'Month' ? 'this month' : 'all time'}.
                   </p>
@@ -561,7 +653,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
                       </tr>
                     </thead>
                     <tbody className={`divide-y text-xs ${isDarkMode ? 'divide-slate-800' : 'divide-gray-50'}`}>
-                      {topItems.map((item, idx) => (
+                      {visibleTopItems.map((item, idx) => (
                         <tr key={idx} className={isDarkMode ? 'hover:bg-slate-800/60' : 'hover:bg-amber-50/40'}>
                           <td className={`py-3 pr-2 font-semibold ${textHeadingClass}`}>{item.name}</td>
                           <td className={`py-3 px-2 ${textSubClass}`}>{item.category}</td>
@@ -583,12 +675,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
                 <h3 className={`text-base font-bold tracking-tight ${textHeadingClass}`}>
                   Recent Bills
                 </h3>
-                {formattedBills.length > 3 && (
+                {formattedBills.length > 6 && (
                   <button 
                     onClick={() => setShowAllBills(!showAllBills)}
                     className="text-xs font-bold text-amber-500 hover:underline transition cursor-pointer"
                   >
-                    {showAllBills ? 'Show Less' : 'View All'}
+                    {showAllBills ? 'Show Less' : 'View More'}
                   </button>
                 )}
               </div>
@@ -613,7 +705,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
                       </tr>
                     </thead>
                     <tbody className={`divide-y text-xs ${isDarkMode ? 'divide-slate-800' : 'divide-gray-50'}`}>
-                      {formattedBills.slice(0, showAllBills ? 10 : 3).map((bill) => (
+                      {formattedBills.slice(0, showAllBills ? formattedBills.length : 6).map((bill) => (
                         <tr key={bill.id} className={isDarkMode ? 'hover:bg-slate-800/60' : 'hover:bg-amber-50/40'}>
                           <td className={`py-3.5 pr-2 font-bold ${textHeadingClass}`}>{bill.id}</td>
                           <td className={`py-3.5 px-2 font-medium ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>{bill.customer}</td>
@@ -720,6 +812,156 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, isDark
               >
                 Close
               </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Top Selling Items Full Detail View Modal */}
+      {showTopItemsModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className={`${isDarkMode ? 'bg-[#1e293b] text-white border-slate-800' : 'bg-white text-gray-900 border-gray-100'} rounded-2xl shadow-2xl w-full max-w-3xl p-6 border relative max-h-[85vh] flex flex-col`}>
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-gray-200/40 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 font-bold">
+                  <Award className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className={`text-lg font-bold ${textHeadingClass}`}>
+                    Top Selling Items Detailed Report
+                  </h3>
+                  <p className={`text-xs ${textSubClass}`}>
+                    Full ranking & sales breakdown for: <span className="font-bold text-amber-500">{timeFilter === 'Today' ? "Today" : timeFilter === 'Week' ? "This Week" : timeFilter === 'Month' ? "This Month" : "All Time (Past 1 Year)"}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setShowTopItemsModal(false);
+                    handleTabChange('Reports');
+                  }}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition cursor-pointer"
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  <span>Open Full Reports</span>
+                </button>
+                <button
+                  onClick={() => setShowTopItemsModal(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Filter Search Toolbar */}
+            <div className="py-4 flex flex-col sm:flex-row gap-3 items-center justify-between border-b border-gray-100 dark:border-slate-800/80">
+              <div className="relative w-full sm:w-64">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search product..."
+                  value={topItemsSearch}
+                  onChange={(e) => setTopItemsSearch(e.target.value)}
+                  className={`w-full pl-9 pr-3 py-1.5 rounded-xl text-xs border focus:outline-none focus:border-amber-500 ${
+                    isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-800'
+                  }`}
+                />
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <span className={`text-xs font-medium ${textSubClass}`}>Category:</span>
+                <select
+                  value={topItemsCategoryFilter}
+                  onChange={(e) => setTopItemsCategoryFilter(e.target.value)}
+                  className={`px-3 py-1.5 rounded-xl text-xs border focus:outline-none focus:border-amber-500 ${
+                    isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-800'
+                  }`}
+                >
+                  <option value="All">All Categories</option>
+                  {activeCategoriesList.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Modal Table Content */}
+            <div className="flex-1 overflow-y-auto py-2 my-2 scrollbar-none">
+              {modalFilteredTopItems.length === 0 ? (
+                <p className={`text-xs py-8 text-center ${textSubClass}`}>
+                  No top items match your search or filter.
+                </p>
+              ) : (
+                <table className="w-full text-left border-collapse">
+                  <thead className="sticky top-0 z-10">
+                    <tr className={`border-b text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'bg-[#1e293b] border-slate-800 text-slate-400' : 'bg-white border-gray-200 text-gray-500'}`}>
+                      <th className="py-2.5 pr-2 w-16 text-center">Rank</th>
+                      <th className="py-2.5 px-2">Product Name</th>
+                      <th className="py-2.5 px-2">Category</th>
+                      <th className="py-2.5 px-2 text-right">Qty Sold</th>
+                      <th className="py-2.5 pl-2 text-right">Total Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody className={`divide-y text-xs ${isDarkMode ? 'divide-slate-800' : 'divide-gray-100'}`}>
+                    {modalFilteredTopItems.map((item, idx) => (
+                      <tr key={idx} className={isDarkMode ? 'hover:bg-slate-800/60' : 'hover:bg-amber-50/50'}>
+                        <td className="py-3 pr-2 text-center">
+                          <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-[11px] font-black ${
+                            idx === 0 ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+                            idx === 1 ? 'bg-slate-200 text-slate-800 border border-slate-300' :
+                            idx === 2 ? 'bg-orange-100 text-orange-800 border border-orange-300' :
+                            isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
+                          </span>
+                        </td>
+                        <td className={`py-3 px-2 font-bold ${textHeadingClass}`}>{item.name}</td>
+                        <td className={`py-3 px-2 ${textSubClass}`}>
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                            {item.category}
+                          </span>
+                        </td>
+                        <td className={`py-3 px-2 text-right font-extrabold ${textHeadingClass}`}>{item.qty} units</td>
+                        <td className={`py-3 pl-2 text-right font-extrabold text-amber-500`}>{item.revenue}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="pt-3 border-t border-gray-200/40 dark:border-slate-800 flex justify-between items-center text-xs">
+              <span className={`font-semibold ${textSubClass}`}>
+                Total Ranked Products: <span className="font-extrabold text-amber-500">{modalFilteredTopItems.length}</span>
+              </span>
+              
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setShowTopItemsModal(false);
+                    handleTabChange('Reports');
+                  }}
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  <span>Open Reports Page</span>
+                </button>
+                <button
+                  onClick={() => setShowTopItemsModal(false)}
+                  className={`px-4 font-semibold py-2 rounded-xl text-xs transition cursor-pointer ${
+                    isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  Close
+                </button>
+              </div>
             </div>
 
           </div>

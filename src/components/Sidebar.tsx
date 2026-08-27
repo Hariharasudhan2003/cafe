@@ -43,7 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Brand Title */}
         <div className="pt-1 pb-1">
           <h1 className="text-xl font-bold text-white tracking-wide truncate">
-            {cafeName} Admin
+            {cafeName}
           </h1>
         </div>
 
@@ -58,7 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ) : null}
           <div className="flex flex-col overflow-hidden">
             <span className="text-sm font-semibold text-white leading-snug truncate">
-              {cafeName} Manager
+              {cafeName}
             </span>
             <span className="text-xs text-gray-400 font-normal truncate">
               {branchLocation}
