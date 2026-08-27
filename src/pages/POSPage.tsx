@@ -467,6 +467,9 @@ export const POSPage: React.FC<POSPageProps> = ({
     return isActive && matchesCategory && matchesSearch;
   });
 
+  // Mobile Sidebar State
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+
   return (
     <div className={`flex h-screen font-sans overflow-hidden transition-colors duration-200 ${
       isDarkMode ? 'bg-[#0f172a] text-slate-100' : 'bg-[#f8fafc] text-gray-800'
@@ -485,10 +488,12 @@ export const POSPage: React.FC<POSPageProps> = ({
         cafeName={cafeSettings.cafeName}
         branchLocation={cafeSettings.branchLocation}
         logoUrl={cafeSettings.logoUrl}
+        isMobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
         {/* Navbar Component */}
         <Navbar 
           activeView={activeNavbarView}
@@ -504,6 +509,7 @@ export const POSPage: React.FC<POSPageProps> = ({
           isDarkMode={isDarkMode}
           cafeName={cafeSettings.cafeName}
           logoUrl={cafeSettings.logoUrl}
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
         />
 
         {/* Toast Notification */}
@@ -514,8 +520,8 @@ export const POSPage: React.FC<POSPageProps> = ({
           </div>
         )}
 
-        {/* POS Workspace: Split layout */}
-        <main className="flex-1 flex overflow-hidden p-6 gap-6">
+        {/* POS Workspace: Responsive Split layout */}
+        <main className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden p-3 sm:p-6 gap-4 sm:gap-6">
           {/* Left Column: Product Catalog & Search */}
           <section className="flex-1 flex flex-col gap-5 overflow-hidden">
             {/* Top Search Bar & Add Item Button */}
@@ -636,7 +642,7 @@ export const POSPage: React.FC<POSPageProps> = ({
           </section>
 
           {/* Right Column: Bill Panel (Slim Compact Breadth) */}
-          <section className="w-[280px] lg:w-[300px] bg-white rounded-2xl shadow-sm border border-gray-200 flex flex-col h-full overflow-hidden shrink-0">
+          <section className="w-full lg:w-[300px] bg-white rounded-2xl shadow-sm border border-gray-200 flex flex-col h-full overflow-hidden shrink-0">
             {/* Bill Header */}
             <div className="p-4 border-b border-gray-100 flex flex-col gap-3">
               <div className="flex items-center justify-between">

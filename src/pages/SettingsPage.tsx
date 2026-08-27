@@ -124,6 +124,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     }
   };
 
+  // Mobile Sidebar State
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+
   return (
     <div className={`flex h-screen font-sans overflow-hidden transition-colors duration-200 ${
       isDarkMode ? 'bg-[#0f172a] text-slate-100' : 'bg-[#f8fafc] text-gray-800'
@@ -136,10 +139,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         cafeName={cafeName}
         branchLocation={branchLocation}
         logoUrl={logoUrl}
+        isMobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
       {/* Main Container */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
         {/* Navbar Component */}
         <Navbar 
           activeView={activeTab}
@@ -148,6 +153,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           isDarkMode={isDarkMode}
           cafeName={cafeName}
           logoUrl={logoUrl}
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
         />
 
         {/* Hidden File Input for Logo Upload */}

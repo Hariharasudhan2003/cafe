@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Bell, PauseCircle } from 'lucide-react';
+import { Bell, PauseCircle, Menu } from 'lucide-react';
 import { apiGetOrders } from '../services/api';
 
 interface NavbarProps {
@@ -12,6 +12,7 @@ interface NavbarProps {
   cafeName?: string;
   logoUrl?: string;
   upcomingAlerts?: { code: string; customer: string; date: string; gapText?: string }[];
+  onToggleMobileSidebar?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -23,7 +24,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   isDarkMode = false,
   cafeName = 'BrewMaster',
   logoUrl,
-  upcomingAlerts: propUpcomingAlerts = []
+  upcomingAlerts: propUpcomingAlerts = [],
+  onToggleMobileSidebar
 }) => {
   const [isNotifOpen, setIsNotifOpen] = useState<boolean>(false);
   const [fetchedAlerts, setFetchedAlerts] = useState<{ code: string; customer: string; date: string; gapText?: string }[]>([]);
@@ -78,7 +80,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
     leaveTimerRef.current = setTimeout(() => {
       setIsNotifOpen(false);
-    }, 2000); // 2-second delay after leaving hover
+    }, 2000);
   };
 
   const handleNotificationClick = () => {
@@ -92,15 +94,23 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className={`h-16 px-6 flex items-center justify-between sticky top-0 z-10 shadow-xs transition-colors duration-200 ${
+    <header className={`h-16 px-3 sm:px-6 flex items-center justify-between sticky top-0 z-10 shadow-xs transition-colors duration-200 ${
       isDarkMode 
         ? 'bg-[#1e293b] border-b border-slate-800 text-white' 
         : 'bg-white border-b border-gray-200 text-gray-800'
     }`}>
-      {/* Left side: Title and Navigation links */}
-      <div className="flex items-center gap-8">
+      {/* Left side: Mobile Menu + Title and Navigation links */}
+      <div className="flex items-center gap-2 sm:gap-6">
+        <button
+          onClick={onToggleMobileSidebar}
+          className="lg:hidden p-1.5 rounded-xl text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition cursor-pointer"
+          title="Toggle Menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
         <h2 
-          className={`text-xl font-bold tracking-tight cursor-pointer truncate max-w-[240px] ${
+          className={`text-base sm:text-xl font-bold tracking-tight cursor-pointer truncate max-w-[130px] sm:max-w-[240px] ${
             isDarkMode ? 'text-amber-400' : 'text-[#8b4513]'
           }`}
           onClick={() => onViewChange && onViewChange('POS Billing')}
@@ -108,10 +118,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           {cafeName} POS
         </h2>
 
-        <nav className="flex items-center gap-6">
+        <nav className="hidden md:flex items-center gap-4 sm:gap-6">
           <button
             onClick={() => onViewChange && onViewChange('Orders')}
-            className={`text-sm font-medium transition-colors cursor-pointer ${
+            className={`text-xs sm:text-sm font-medium transition-colors cursor-pointer whitespace-nowrap ${
               activeView === 'Live Orders' || activeView === 'Orders'
                 ? isDarkMode ? 'text-amber-400 font-semibold border-b-2 border-amber-400 pb-0.5' : 'text-[#8b4513] font-semibold border-b-2 border-[#8b4513] pb-0.5'
                 : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-gray-500 hover:text-gray-800'
@@ -121,7 +131,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
           <button
             onClick={() => onViewChange && onViewChange('Dashboard')}
-            className={`text-sm font-medium transition-colors cursor-pointer ${
+            className={`text-xs sm:text-sm font-medium transition-colors cursor-pointer whitespace-nowrap ${
               activeView === 'Today\'s Sales' || activeView === 'Dashboard'
                 ? isDarkMode ? 'text-amber-400 font-semibold border-b-2 border-amber-400 pb-0.5' : 'text-[#8b4513] font-semibold border-b-2 border-[#8b4513] pb-0.5'
                 : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-gray-500 hover:text-gray-800'

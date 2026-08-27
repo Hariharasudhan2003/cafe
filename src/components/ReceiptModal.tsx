@@ -99,7 +99,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         }
       `}</style>
 
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 relative border border-gray-100 flex flex-col items-center max-h-[90vh] overflow-y-auto scrollbar-none">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-[92vw] sm:max-w-sm p-4 sm:p-6 relative border border-gray-100 flex flex-col items-center max-h-[92vh] overflow-y-auto scrollbar-none">
         
         {/* Close Button (Hidden when printing) */}
         <button

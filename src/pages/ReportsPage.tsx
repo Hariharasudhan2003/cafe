@@ -242,6 +242,9 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
   const textHeadingClass = isDarkMode ? 'text-white' : 'text-gray-900';
   const textSubClass = isDarkMode ? 'text-slate-400' : 'text-gray-500';
 
+  // Mobile Sidebar State
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+
   return (
     <div className={`flex h-screen font-sans overflow-hidden transition-colors duration-200 ${
       isDarkMode ? 'bg-[#0f172a] text-slate-100' : 'bg-[#f8fafc] text-gray-800'
@@ -254,10 +257,12 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
         cafeName={cafeSettings.cafeName}
         branchLocation={cafeSettings.branchLocation}
         logoUrl={cafeSettings.logoUrl}
+        isMobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
       {/* Main Container */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
         {/* Navbar Component */}
         <Navbar 
           activeView={activeTab}
@@ -266,6 +271,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
           isDarkMode={isDarkMode}
           cafeName={cafeSettings.cafeName}
           logoUrl={cafeSettings.logoUrl}
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
         />
 
         {/* Reports Body */}

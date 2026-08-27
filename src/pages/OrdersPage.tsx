@@ -365,6 +365,9 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
     });
   };
 
+  // Mobile Sidebar State
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+
   return (
     <div className={`flex h-screen font-sans overflow-hidden transition-colors duration-200 ${
       isDarkMode ? 'bg-[#0f172a] text-slate-100' : 'bg-[#f8fafc] text-gray-800'
@@ -377,10 +380,12 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
         cafeName={settings.cafeName}
         branchLocation={settings.branchLocation}
         logoUrl={settings.logoUrl}
+        isMobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
       {/* Main Container */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
         {/* Navbar Component */}
         <Navbar 
           activeView={activeTab}
@@ -390,6 +395,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
           cafeName={settings.cafeName}
           logoUrl={settings.logoUrl}
           upcomingAlerts={upcomingAlerts}
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
         />
 
         {/* Toast Alert */}
