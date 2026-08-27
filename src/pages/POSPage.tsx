@@ -41,6 +41,15 @@ interface POSPageProps {
   taxInclusive?: boolean;
 }
 
+const DEFAULT_POS_PRODUCTS: Product[] = [
+  { id: 'p_1', name: 'Veg Puff', category: 'Snacks', price: 20, stock: 50, status: 'Active', image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=500&q=80' },
+  { id: 'p_2', name: 'Paneer Puff', category: 'Snacks', price: 35, stock: 32, status: 'Active', image: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=500&q=80' },
+  { id: 'p_3', name: 'Masala Tea', category: 'Tea', price: 15, stock: 'infinity', status: 'Active', image: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=500&q=80' },
+  { id: 'p_4', name: 'Cold Coffee', category: 'Coffee', price: 80, stock: 25, status: 'Active', image: 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=500&q=80' },
+  { id: 'p_5', name: 'Fresh Lemon Juice', category: 'Juice', price: 40, stock: 'infinity', status: 'Active', image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=500&q=80' },
+  { id: 'p_6', name: 'Cool Drinks 500ml', category: 'Cool Drinks', price: 45, stock: 40, status: 'Active', image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=500&q=80' }
+];
+
 export const POSPage: React.FC<POSPageProps> = ({ 
   onNavigate, 
   isDarkMode = false,
@@ -51,7 +60,7 @@ export const POSPage: React.FC<POSPageProps> = ({
   taxInclusive: propTaxInclusive
 }) => {
   // State
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(DEFAULT_POS_PRODUCTS);
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [deletedCategories, setDeletedCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');

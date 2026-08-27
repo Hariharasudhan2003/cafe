@@ -35,6 +35,15 @@ interface ProductsPageProps {
   logoUrl?: string;
 }
 
+const DEFAULT_PRODUCT_ITEMS: ProductItem[] = [
+  { id: '1', code: '#PRD-001', name: 'Veg Puff', category: 'Snacks', price: 20, gst: 12, status: 'Active' },
+  { id: '2', code: '#PRD-002', name: 'Paneer Puff', category: 'Snacks', price: 35, gst: 12, status: 'Active' },
+  { id: '3', code: '#PRD-003', name: 'Masala Tea', category: 'Beverage', price: 15, gst: 5, status: 'Active' },
+  { id: '4', code: '#PRD-004', name: 'Cold Coffee', category: 'Beverage', price: 80, gst: 18, status: 'Active' },
+  { id: '5', code: '#PRD-005', name: 'Fresh Lemon Juice', category: 'Juices', price: 40, gst: 5, status: 'Active' },
+  { id: '6', code: '#PRD-006', name: 'Chocolate Brownie', category: 'Desserts', price: 90, gst: 18, status: 'Active' }
+];
+
 export const ProductsPage: React.FC<ProductsPageProps> = ({ 
   onNavigate, 
   isDarkMode = false,
@@ -43,7 +52,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
   logoUrl: propLogoUrl
 }) => {
   const [activeTab, setActiveTab] = useState<string>('Products');
-  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [products, setProducts] = useState<ProductItem[]>(DEFAULT_PRODUCT_ITEMS);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [isAddMode, setIsAddMode] = useState<boolean>(false);
@@ -91,7 +100,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
 
     apiGetProducts()
       .then((data) => {
-        if (Array.isArray(data)) {
+        if (Array.isArray(data) && data.length > 0) {
           const formatted: ProductItem[] = data.map((p: any, idx: number) => {
             const seqCode = `#PRD-${String(idx + 1).padStart(3, '0')}`;
             return {
@@ -106,9 +115,14 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
             };
           });
           setProducts(formatted);
+        } else if (Array.isArray(data) && data.length === 0) {
+          setProducts(DEFAULT_PRODUCT_ITEMS);
         }
       })
-      .catch((err) => console.log('Products API load:', err));
+      .catch((err) => {
+        console.log('Products API load fallback:', err);
+        setProducts(DEFAULT_PRODUCT_ITEMS);
+      });
 
     try {
       const saved = localStorage.getItem('cafe_custom_categories');

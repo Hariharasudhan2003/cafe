@@ -88,7 +88,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     ]).then(([fetchedBills, fetchedOrders, validProducts]) => {
       const validBills = Array.isArray(fetchedBills) ? fetchedBills : [];
       const validOrders = Array.isArray(fetchedOrders) ? fetchedOrders : [];
-      const prods = Array.isArray(validProducts) ? validProducts : [];
+      const prods = (Array.isArray(validProducts) && validProducts.length > 0) ? validProducts : [
+        { name: 'Veg Puff', category: 'Snacks', status: 'Active' },
+        { name: 'Paneer Puff', category: 'Snacks', status: 'Active' },
+        { name: 'Masala Tea', category: 'Beverage', status: 'Active' },
+        { name: 'Cold Coffee', category: 'Beverage', status: 'Active' },
+        { name: 'Fresh Lemon Juice', category: 'Juices', status: 'Active' },
+        { name: 'Chocolate Brownie', category: 'Desserts', status: 'Active' }
+      ];
 
       setBills(validBills);
       setOrders(validOrders);
