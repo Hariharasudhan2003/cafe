@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
+    "build": "echo 'No build step required for Node backend'",
     "dev": "nodemon index.js",
     "seed": "node seed.js"
   },
