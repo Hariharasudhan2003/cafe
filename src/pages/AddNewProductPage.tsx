@@ -5,7 +5,9 @@ import {
   Save, 
   CheckCircle2,
   Tag,
-  X
+  X,
+  ChevronDown,
+  Check
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { Navbar } from '../components/Navbar';
@@ -16,14 +18,23 @@ interface AddNewProductPageProps {
   onNavigate?: (tab: string) => void;
   onSaveProduct?: (newProd: ProductItem) => void;
   onBack?: () => void;
+  isDarkMode?: boolean;
+  cafeName?: string;
+  branchLocation?: string;
+  logoUrl?: string;
 }
 
 export const AddNewProductPage: React.FC<AddNewProductPageProps> = ({ 
   onNavigate, 
   onSaveProduct,
-  onBack 
+  onBack,
+  isDarkMode = false,
+  cafeName = 'BrewMaster',
+  branchLocation = 'Downtown Branch',
+  logoUrl = ''
 }) => {
   const [activeTab, setActiveTab] = useState<string>('Products');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Form State
@@ -37,6 +48,7 @@ export const AddNewProductPage: React.FC<AddNewProductPageProps> = ({
 
   // Category Modal State
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState<boolean>(false);
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState<boolean>(false);
   const [newCategoryName, setNewCategoryName] = useState<string>('');
   const [customCategories, setCustomCategories] = useState<string[]>([]);
 
@@ -163,21 +175,32 @@ export const AddNewProductPage: React.FC<AddNewProductPageProps> = ({
   };
 
   return (
-    <div className="flex h-screen bg-[#f8fafc] text-gray-800 font-sans overflow-hidden">
+    <div className={`flex h-screen font-sans overflow-hidden transition-colors duration-200 ${
+      isDarkMode ? 'bg-[#0f172a] text-slate-100' : 'bg-[#f8fafc] text-gray-800'
+    }`}>
       {/* Sidebar Component */}
       <Sidebar 
         activeTab={activeTab}
         onTabChange={handleTabChange}
         onNewOrder={() => handleTabChange('POS Billing')}
+        cafeName={cafeName}
+        branchLocation={branchLocation}
+        logoUrl={logoUrl}
+        isMobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
       {/* Main Container */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
         {/* Navbar Component */}
         <Navbar 
           activeView={activeTab}
           onViewChange={(view) => handleTabChange(view)}
           onCreateBill={() => handleTabChange('POS Billing')}
+          isDarkMode={isDarkMode}
+          cafeName={cafeName}
+          logoUrl={logoUrl}
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
         />
 
         {/* Toast Alert */}
@@ -189,39 +212,44 @@ export const AddNewProductPage: React.FC<AddNewProductPageProps> = ({
         )}
 
         {/* Scrollable Main Content */}
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">
+        <main className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-3.5 sm:space-y-6">
           
           {/* Header Bar */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Add New Product</h1>
-              <p className="text-sm text-gray-500 mt-0.5">Fill in the details below to add a new item to your menu catalog.</p>
+              <h1 className={`text-lg sm:text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Add New Product</h1>
+              <p className={`text-xs sm:text-sm mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Fill in the details below to add a new item to your menu catalog.</p>
             </div>
 
             {/* Back Button */}
             <button
               onClick={handleBack}
-              className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition cursor-pointer"
+              className={`flex items-center gap-1 sm:gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition cursor-pointer shrink-0 ${
+                isDarkMode ? 'text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border border-gray-200'
+              }`}
             >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to Products</span>
+              <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Back to Products</span>
+              <span className="sm:hidden">Back</span>
             </button>
           </div>
 
           {/* Form Box */}
-          <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200/80 shadow-2xs p-6 space-y-6">
+          <form onSubmit={handleSubmit} className={`rounded-xl sm:rounded-2xl border shadow-2xs p-3.5 sm:p-6 space-y-4 sm:space-y-6 ${
+            isDarkMode ? 'bg-[#1e293b] border-slate-800 text-white' : 'bg-white border-gray-200/80 text-gray-900'
+          }`}>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8">
               
               {/* Left Column: Basic Information */}
-              <div className="space-y-5">
-                <h3 className="text-base font-bold text-gray-900 border-b border-gray-100 pb-3">
+              <div className="space-y-3 sm:space-y-5">
+                <h3 className={`text-sm sm:text-base font-bold pb-2 sm:pb-3 border-b ${isDarkMode ? 'border-slate-800 text-white' : 'border-gray-100 text-gray-900'}`}>
                   Basic Information
                 </h3>
 
                 {/* Product Name */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                     Product Name <span className="text-rose-500">*</span>
                   </label>
                   <input
@@ -230,14 +258,16 @@ export const AddNewProductPage: React.FC<AddNewProductPageProps> = ({
                     placeholder="e.g., Caramel Macchiato"
                     value={productName}
                     onChange={(e) => setProductName(e.target.value)}
-                    className="w-full bg-slate-50/60 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-900 focus:bg-white focus:border-amber-500 outline-none transition"
+                    className={`w-full border rounded-lg sm:rounded-xl px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium outline-none transition ${
+                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-amber-500' : 'bg-slate-50/60 border-gray-200 text-gray-900 focus:bg-white focus:border-amber-500'
+                    }`}
                   />
                 </div>
 
-                {/* Category */}
+                {/* Custom Category Dropdown */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-semibold text-gray-700">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className={`block text-xs font-semibold ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                       Category <span className="text-rose-500">*</span>
                     </label>
                     <button
@@ -248,48 +278,89 @@ export const AddNewProductPage: React.FC<AddNewProductPageProps> = ({
                       + New Category
                     </button>
                   </div>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value as any)}
-                    required
-                    className="w-full bg-slate-50/60 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-700 outline-none focus:bg-white focus:border-amber-500 cursor-pointer shadow-2xs"
-                  >
-                    <option value="" disabled>Select Category</option>
-                    {allCategoryOptions.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
+
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                      className={`w-full flex items-center justify-between border rounded-lg sm:rounded-xl px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold outline-none cursor-pointer transition shadow-2xs ${
+                        isDarkMode 
+                          ? 'bg-slate-800 border-slate-700 text-white focus:border-amber-500' 
+                          : 'bg-slate-50/60 border-gray-200 text-gray-700 focus:bg-white focus:border-amber-500'
+                      }`}
+                    >
+                      <span className={category ? (isDarkMode ? 'text-white' : 'text-gray-900') : (isDarkMode ? 'text-slate-400' : 'text-gray-400')}>
+                        {category || 'Select Category'}
+                      </span>
+                      <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isCategoryDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {isCategoryDropdownOpen && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-30" 
+                          onClick={() => setIsCategoryDropdownOpen(false)} 
+                        />
+                        <div className={`absolute left-0 right-0 top-full mt-1 z-40 rounded-xl border shadow-xl overflow-hidden max-h-52 overflow-y-auto transition-all ${
+                          isDarkMode ? 'bg-[#1e293b] border-slate-700 text-white' : 'bg-white border-gray-200 text-gray-800'
+                        }`}>
+                          {allCategoryOptions.map((cat) => (
+                            <button
+                              key={cat}
+                              type="button"
+                              onClick={() => {
+                                setCategory(cat);
+                                setIsCategoryDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-3.5 py-2.5 text-xs sm:text-sm font-semibold flex items-center justify-between border-b last:border-b-0 transition cursor-pointer ${
+                                isDarkMode ? 'border-slate-800' : 'border-gray-50'
+                              } ${
+                                category === cat 
+                                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold' 
+                                  : (isDarkMode ? 'hover:bg-slate-800 text-slate-200' : 'hover:bg-amber-50 text-gray-700')
+                              }`}
+                            >
+                              <span>{cat}</span>
+                              {category === cat && <Check className="w-3.5 h-3.5 text-amber-500" />}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {/* Description (Optional) */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                     Description (Optional)
                   </label>
                   <textarea
-                    rows={4}
+                    rows={3}
                     placeholder="Brief description of the product..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="w-full bg-slate-50/60 border border-gray-200 rounded-xl p-4 text-sm font-medium text-gray-900 focus:bg-white focus:border-amber-500 outline-none transition resize-none"
+                    className={`w-full border rounded-lg sm:rounded-xl p-3 text-xs sm:text-sm font-medium outline-none transition resize-none ${
+                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-amber-500' : 'bg-slate-50/60 border-gray-200 text-gray-900 focus:bg-white focus:border-amber-500'
+                    }`}
                   ></textarea>
                 </div>
               </div>
 
               {/* Right Column: Pricing & Media */}
-              <div className="space-y-5">
-                <h3 className="text-base font-bold text-gray-900 border-b border-gray-100 pb-3">
+              <div className="space-y-3 sm:space-y-5">
+                <h3 className={`text-sm sm:text-base font-bold pb-2 sm:pb-3 border-b ${isDarkMode ? 'border-slate-800 text-white' : 'border-gray-100 text-gray-900'}`}>
                   Pricing & Media
                 </h3>
 
                 {/* Price & GST Grid */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                       Selling Price <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">₹</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs sm:text-sm font-bold text-gray-400">₹</span>
                       <input
                         type="number"
                         step="0.01"
@@ -297,13 +368,15 @@ export const AddNewProductPage: React.FC<AddNewProductPageProps> = ({
                         placeholder="0.00"
                         value={price}
                         onChange={(e) => setPrice(e.target.value)}
-                        className="w-full bg-slate-50/60 border border-gray-200 rounded-xl pl-8 pr-4 py-2.5 text-sm font-bold text-gray-900 focus:bg-white focus:border-amber-500 outline-none transition"
+                        className={`w-full border rounded-lg sm:rounded-xl pl-7 sm:pl-8 pr-3 py-2 sm:py-2.5 text-xs sm:text-sm font-bold outline-none transition ${
+                          isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-amber-500' : 'bg-slate-50/60 border-gray-200 text-gray-900 focus:bg-white focus:border-amber-500'
+                        }`}
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                       GST (%)
                     </label>
                     <div className="relative">
@@ -312,27 +385,31 @@ export const AddNewProductPage: React.FC<AddNewProductPageProps> = ({
                         placeholder="0"
                         value={gst}
                         onChange={(e) => setGst(e.target.value)}
-                        className="w-full bg-slate-50/60 border border-gray-200 rounded-xl pl-4 pr-8 py-2.5 text-sm font-semibold text-gray-900 focus:bg-white focus:border-amber-500 outline-none transition"
+                        className={`w-full border rounded-lg sm:rounded-xl pl-3 pr-7 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold outline-none transition ${
+                          isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-amber-500' : 'bg-slate-50/60 border-gray-200 text-gray-900 focus:bg-white focus:border-amber-500'
+                        }`}
                       />
-                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">%</span>
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">%</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Product Image Drop Area */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                     Product Image
                   </label>
                   
-                  <div className="border-2 border-dashed border-gray-200 hover:border-amber-500 rounded-2xl p-6 bg-slate-50/50 flex flex-col items-center justify-center text-center transition-colors cursor-pointer group">
-                    <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 mb-2 group-hover:scale-110 transition-transform">
-                      <ImagePlus className="w-6 h-6" />
+                  <div className={`border-2 border-dashed rounded-xl sm:rounded-2xl p-3.5 sm:p-5 flex flex-col items-center justify-center text-center transition-colors cursor-pointer group ${
+                    isDarkMode ? 'border-slate-700 hover:border-amber-500 bg-slate-900/40' : 'border-gray-200 hover:border-amber-500 bg-slate-50/50'
+                  }`}>
+                    <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 mb-1.5 group-hover:scale-110 transition-transform">
+                      <ImagePlus className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
-                    <p className="text-xs text-gray-600 font-medium">
+                    <p className={`text-xs font-medium ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
                       Drag & drop or <span className="text-[#f97316] font-semibold underline">browse</span>
                     </p>
-                    <span className="text-[11px] text-gray-400 mt-1">PNG, JPG up to 5MB</span>
+                    <span className="text-[10px] sm:text-[11px] text-gray-400 mt-0.5">PNG, JPG up to 5MB</span>
 
                     {/* Image URL input fallback */}
                     <input
@@ -340,14 +417,16 @@ export const AddNewProductPage: React.FC<AddNewProductPageProps> = ({
                       placeholder="Or paste Image URL..."
                       value={imageUrl}
                       onChange={(e) => setImageUrl(e.target.value)}
-                      className="mt-3 w-full max-w-xs bg-white border border-gray-200 rounded-xl px-3 py-1.5 text-xs text-gray-800 outline-none focus:border-amber-500 text-center"
+                      className={`mt-2.5 w-full max-w-xs border rounded-lg px-3 py-1.5 text-xs outline-none text-center ${
+                        isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-amber-500' : 'bg-white border-gray-200 text-gray-800 focus:border-amber-500'
+                      }`}
                     />
                   </div>
                 </div>
 
                 {/* Status Toggle */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-2">
+                  <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                     Status
                   </label>
                   
@@ -355,18 +434,18 @@ export const AddNewProductPage: React.FC<AddNewProductPageProps> = ({
                     <button
                       type="button"
                       onClick={() => setIsActive(!isActive)}
-                      className={`w-12 h-6 rounded-full transition-colors relative p-1 ${
-                        isActive ? 'bg-[#f97316]' : 'bg-gray-300'
+                      className={`w-11 h-6 rounded-full transition-colors relative p-0.5 cursor-pointer ${
+                        isActive ? 'bg-[#f97316]' : (isDarkMode ? 'bg-slate-700' : 'bg-gray-300')
                       }`}
                     >
                       <div
-                        className={`w-4 h-4 rounded-full bg-white transition-transform shadow-sm ${
-                          isActive ? 'translate-x-6' : 'translate-x-0'
+                        className={`w-5 h-5 rounded-full bg-white transition-transform shadow-sm ${
+                          isActive ? 'translate-x-5' : 'translate-x-0'
                         }`}
                       ></div>
                     </button>
 
-                    <span className="text-xs font-semibold text-gray-700">
+                    <span className={`text-xs font-semibold ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                       {isActive ? 'Active (Available for order)' : 'Inactive'}
                     </span>
                   </div>
@@ -377,19 +456,21 @@ export const AddNewProductPage: React.FC<AddNewProductPageProps> = ({
             </div>
 
             {/* Bottom Actions */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-100 dark:border-slate-800">
               <button
                 type="button"
                 onClick={handleBack}
-                className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold px-5 py-2.5 rounded-xl text-xs transition"
+                className={`font-semibold px-3.5 py-1.5 rounded-lg text-xs transition cursor-pointer ${
+                  isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                }`}
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="bg-[#f97316] hover:bg-orange-600 text-white font-semibold px-6 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-md transition active:scale-[0.98]"
+                className="bg-[#f97316] hover:bg-orange-600 text-white font-semibold px-4 py-1.5 rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition active:scale-[0.98] cursor-pointer"
               >
-                <Save className="w-4 h-4" />
+                <Save className="w-3.5 h-3.5" />
                 <span>Save Product</span>
               </button>
             </div>
@@ -401,33 +482,37 @@ export const AddNewProductPage: React.FC<AddNewProductPageProps> = ({
 
       {/* Add New Category Modal */}
       {isCategoryModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white text-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6 border border-gray-100 relative">
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 overflow-y-auto">
+          <div className={`rounded-2xl shadow-2xl w-full max-w-[310px] sm:max-w-md p-4 sm:p-5 border relative ${
+            isDarkMode ? 'bg-[#1e293b] border-slate-700 text-white' : 'bg-white border-gray-100 text-gray-900'
+          }`}>
             
             <button
               onClick={() => setIsCategoryModalOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-gray-100 transition cursor-pointer"
+              className={`absolute top-4 right-4 p-1.5 rounded-full transition cursor-pointer ${
+                isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+              }`}
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
 
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/30 flex items-center justify-center font-bold">
-                <Tag className="w-5 h-5" />
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/30 flex items-center justify-center font-bold">
+                <Tag className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">
+                <h3 className={`text-base font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                   Add New Category
                 </h3>
-                <span className="text-xs text-gray-500">
+                <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
                   Create a menu category for products & POS billing
                 </span>
               </div>
             </div>
 
-            <form onSubmit={handleSaveNewCategory} className="space-y-4 my-4">
+            <form onSubmit={handleSaveNewCategory} className="space-y-3 my-3">
               <div>
-                <label className="block text-xs font-semibold mb-1.5 text-gray-700">
+                <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                   Category Name <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -436,26 +521,30 @@ export const AddNewProductPage: React.FC<AddNewProductPageProps> = ({
                   placeholder="e.g. Ice Creams, Shakes, Biryani..."
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-900 bg-slate-50 focus:bg-white focus:border-amber-500 outline-none transition"
+                  className={`w-full border rounded-lg px-3.5 py-2 text-xs font-medium outline-none transition ${
+                    isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-amber-500' : 'bg-slate-50 border-gray-200 text-gray-900 focus:bg-white focus:border-amber-500'
+                  }`}
                   autoFocus
                 />
               </div>
 
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-xs text-amber-800">
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5 text-xs text-amber-700 dark:text-amber-300">
                 💡 <span className="font-semibold">Note:</span> Added category will immediately select here & show up in POS Billing category pills.
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-2.5 pt-1">
                 <button
                   type="button"
                   onClick={() => setIsCategoryModalOpen(false)}
-                  className="flex-1 font-semibold py-2.5 rounded-xl text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 transition cursor-pointer"
+                  className={`flex-1 font-semibold py-2 rounded-lg text-xs transition cursor-pointer ${
+                    isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  }`}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition cursor-pointer"
+                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-lg text-xs shadow-xs transition cursor-pointer"
                 >
                   Save Category
                 </button>

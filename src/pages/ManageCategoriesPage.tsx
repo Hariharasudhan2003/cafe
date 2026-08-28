@@ -167,9 +167,9 @@ export const ManageCategoriesPage: React.FC<ManageCategoriesPageProps> = ({
 
             <button
               onClick={onBack}
-              className="bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200 font-semibold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition cursor-pointer"
+              className="bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200 font-semibold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition cursor-pointer"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to Products</span>
             </button>
           </div>
@@ -178,10 +178,10 @@ export const ManageCategoriesPage: React.FC<ManageCategoriesPageProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
             {/* Left Column (5 cols): Add Category Form */}
-            <div className={`lg:col-span-5 ${cardBgClass} rounded-2xl p-6 border shadow-2xs flex flex-col justify-between h-fit`}>
+            <div className={`lg:col-span-5 ${cardBgClass} rounded-2xl p-5 border shadow-2xs flex flex-col justify-between h-fit`}>
               <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-100 dark:border-slate-800">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/30 flex items-center justify-center font-bold">
-                  <FolderPlus className="w-5 h-5" />
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/30 flex items-center justify-center font-bold">
+                  <FolderPlus className="w-4 h-4" />
                 </div>
                 <div>
                   <h3 className={`text-base font-bold ${textHeadingClass}`}>Add New Category</h3>
@@ -189,9 +189,9 @@ export const ManageCategoriesPage: React.FC<ManageCategoriesPageProps> = ({
                 </div>
               </div>
 
-              <form onSubmit={handleAddCategory} className="space-y-4">
+              <form onSubmit={handleAddCategory} className="space-y-3">
                 <div>
-                  <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
+                  <label className={`block text-xs font-semibold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                     Category Name <span className="text-rose-500">*</span>
                   </label>
                   <input
@@ -200,21 +200,21 @@ export const ManageCategoriesPage: React.FC<ManageCategoriesPageProps> = ({
                     placeholder="e.g. Milkshakes, Ice Creams, Wraps..."
                     value={categoryName}
                     onChange={(e) => setCategoryName(e.target.value)}
-                    className={`w-full border rounded-xl px-4 py-2.5 text-sm font-medium focus:border-amber-500 outline-none transition ${
+                    className={`w-full border rounded-lg px-3.5 py-2 text-xs font-medium focus:border-amber-500 outline-none transition ${
                       isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-slate-50 border-gray-200 text-gray-900'
                     }`}
                   />
                 </div>
 
-                <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-xs text-amber-700 dark:text-amber-300">
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5 text-xs text-amber-700 dark:text-amber-300">
                   💡 <span className="font-semibold">Note:</span> Categories added here will automatically appear in Products form & POS Billing pills.
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full bg-[#f97316] hover:bg-orange-600 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full bg-[#f97316] hover:bg-orange-600 text-white font-bold py-2 rounded-lg text-xs shadow-xs transition cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  <Plus className="w-4 h-4 stroke-[2.5]" />
+                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                   <span>Save Category</span>
                 </button>
               </form>

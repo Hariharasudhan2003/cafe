@@ -10,7 +10,7 @@ import {
 import { apiGetSettings } from './services/api';
 
 function App() {
-  const [currentTab, setCurrentTab] = useState<string>('Settings');
+  const [currentTab, setCurrentTab] = useState<string>('POS Billing');
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const [globalSettings, setGlobalSettings] = useState({
     cafeName: 'BrewMaster',

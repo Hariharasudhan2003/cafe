@@ -8,7 +8,9 @@ import {
   ChevronLeft, 
   ChevronRight,
   CheckCircle2,
-  Tag
+  Tag,
+  ChevronDown,
+  Check
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { Navbar } from '../components/Navbar';
@@ -65,6 +67,8 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
   const [globalGst, setGlobalGst] = useState<number>(18);
   const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+  const [isModalCategoryDropdownOpen, setIsModalCategoryDropdownOpen] = useState<boolean>(false);
 
   const [cafeSettings, setCafeSettings] = useState({
     cafeName: propCafeName || 'BrewMaster',
@@ -221,6 +225,10 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
           setIsAddMode(false);
           showToast(`Added "${newProd.name}" to menu catalog!`);
         }}
+        isDarkMode={isDarkMode}
+        cafeName={cafeSettings.cafeName}
+        branchLocation={cafeSettings.branchLocation}
+        logoUrl={cafeSettings.logoUrl}
       />
     );
   }
@@ -370,9 +378,6 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
     );
   });
 
-  // Mobile Sidebar State
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
-
   return (
     <div className={`flex h-screen font-sans overflow-hidden transition-colors duration-200 ${
       isDarkMode ? 'bg-[#0f172a] text-slate-100' : 'bg-[#f8fafc] text-gray-800'
@@ -420,16 +425,16 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
               <p className={`text-sm mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Manage your cafe's menu items, pricing, and stock.</p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2.5">
               {/* Search Bar */}
               <div className="relative">
-                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input 
                   type="text"
                   placeholder="Search products..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className={`pl-9 pr-4 py-2 rounded-xl text-sm outline-none focus:border-amber-500 shadow-2xs w-60 border ${
+                  className={`pl-8 pr-3 py-1.5 rounded-lg text-xs outline-none focus:border-amber-500 shadow-2xs w-52 border ${
                     isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-white border-gray-200 text-gray-800'
                   }`}
                 />
@@ -438,18 +443,18 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
               {/* Add Category Button */}
               <button
                 onClick={() => setIsCategoryModalOpen(true)}
-                className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 shadow-sm transition-all active:scale-[0.98] cursor-pointer"
+                className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all active:scale-[0.98] cursor-pointer"
               >
-                <Tag className="w-4 h-4 stroke-[2.5]" />
+                <Tag className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span>Add Category</span>
               </button>
 
               {/* Add New Product Button */}
               <button
                 onClick={() => setIsAddMode(true)}
-                className="bg-[#f97316] hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 shadow-sm transition-all active:scale-[0.98] cursor-pointer"
+                className="bg-[#f97316] hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all active:scale-[0.98] cursor-pointer"
               >
-                <Plus className="w-4 h-4 stroke-[2.5]" />
+                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span>Add New Product</span>
               </button>
             </div>
@@ -539,10 +544,10 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
                           </td>
 
                           {/* STATUS */}
-                          <td className="py-4 px-4 text-center">
+                          <td className="py-3 px-4 text-center">
                             <button
                               onClick={() => handleToggleStatus(product)}
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold cursor-pointer transition ${
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold cursor-pointer transition ${
                                 isInactive 
                                   ? 'bg-rose-100 text-rose-800 hover:bg-rose-200' 
                                   : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
@@ -554,25 +559,25 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
                           </td>
 
                           {/* ACTIONS */}
-                          <td className="py-4 px-5 text-right">
-                            <div className="flex items-center justify-end gap-2">
+                          <td className="py-3 px-5 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
                               <button
                                 onClick={() => openEditModal(product)}
-                                className={`p-1.5 rounded-lg transition ${
+                                className={`p-1 rounded-md transition ${
                                   isDarkMode ? 'text-slate-300 hover:text-white hover:bg-slate-800' : 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'
                                 }`}
                                 title="Edit Product"
                               >
-                                <Edit3 className="w-4 h-4" />
+                                <Edit3 className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => handleDeleteProduct(product.id, product.name)}
-                                className={`p-1.5 rounded-lg transition ${
+                                className={`p-1 rounded-md transition ${
                                   isDarkMode ? 'text-slate-300 hover:text-rose-400 hover:bg-slate-800' : 'text-gray-400 hover:text-rose-600 hover:bg-rose-50'
                                 }`}
                                 title="Delete Product"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </td>
@@ -592,22 +597,22 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
                 Showing {filteredProducts.length > 0 ? 1 : 0} to {filteredProducts.length} of {products.length} entries
               </div>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 <button 
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  className={`p-1.5 rounded-lg border disabled:opacity-40 ${
+                  className={`p-1 rounded-md border disabled:opacity-40 ${
                     isDarkMode ? 'border-slate-700 hover:bg-slate-800 text-slate-300' : 'border-gray-200 hover:bg-gray-50 text-gray-400'
                   }`}
                   disabled={currentPage === 1}
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-3.5 h-3.5" />
                 </button>
 
                 {[1, 2, 3, 4, 5].map((page) => (
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${
+                    className={`w-6 h-6 rounded-md text-[11px] font-bold transition-all ${
                       currentPage === page
                         ? 'bg-amber-500 text-white shadow-2xs font-extrabold'
                         : isDarkMode ? 'text-slate-300 hover:bg-slate-800' : 'text-gray-600 hover:bg-gray-100'
@@ -617,15 +622,15 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
                   </button>
                 ))}
 
-                <span className="px-1 text-gray-400">...</span>
+                <span className="px-0.5 text-gray-400 text-xs">...</span>
 
                 <button 
                   onClick={() => setCurrentPage(p => p + 1)}
-                  className={`p-1.5 rounded-lg border ${
+                  className={`p-1 rounded-md border ${
                     isDarkMode ? 'border-slate-700 hover:bg-slate-800 text-slate-300' : 'border-gray-200 hover:bg-gray-50 text-gray-600'
                   }`}
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
@@ -637,8 +642,8 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
 
       {/* Add / Edit Product Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className={`rounded-2xl shadow-2xl w-full max-w-md p-6 border relative ${
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+          <div className={`rounded-2xl shadow-2xl w-full max-w-[310px] sm:max-w-md p-4 sm:p-6 border relative ${
             isDarkMode ? 'bg-[#1e293b] text-white border-slate-800' : 'bg-white text-gray-900 border-gray-100'
           }`}>
             <button
@@ -685,17 +690,51 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
                       + New Category
                     </button>
                   </div>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
-                    className={`w-full border rounded-xl px-3.5 py-2.5 text-sm outline-none ${
-                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-200 text-gray-800'
-                    }`}
-                  >
-                    {allCategoryOptions.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsModalCategoryDropdownOpen(!isModalCategoryDropdownOpen)}
+                      className={`w-full flex items-center justify-between border rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-semibold outline-none cursor-pointer transition ${
+                        isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-200 text-gray-800'
+                      }`}
+                    >
+                      <span>{formData.category || 'Select Category'}</span>
+                      <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isModalCategoryDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {isModalCategoryDropdownOpen && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-30" 
+                          onClick={() => setIsModalCategoryDropdownOpen(false)} 
+                        />
+                        <div className={`absolute left-0 right-0 top-full mt-1 z-40 rounded-xl border shadow-xl overflow-hidden max-h-48 overflow-y-auto transition-all ${
+                          isDarkMode ? 'bg-[#1e293b] border-slate-700 text-white' : 'bg-white border-gray-200 text-gray-800'
+                        }`}>
+                          {allCategoryOptions.map((cat) => (
+                            <button
+                              key={cat}
+                              type="button"
+                              onClick={() => {
+                                setFormData({ ...formData, category: cat as any });
+                                setIsModalCategoryDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-3.5 py-2 text-xs sm:text-sm font-semibold flex items-center justify-between border-b last:border-b-0 transition cursor-pointer ${
+                                isDarkMode ? 'border-slate-800' : 'border-gray-50'
+                              } ${
+                                formData.category === cat 
+                                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold' 
+                                  : (isDarkMode ? 'hover:bg-slate-800 text-slate-200' : 'hover:bg-amber-50 text-gray-700')
+                              }`}
+                            >
+                              <span>{cat}</span>
+                              {formData.category === cat && <Check className="w-3.5 h-3.5 text-amber-500" />}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -766,11 +805,11 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
                 />
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-2.5 pt-2">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className={`flex-1 font-semibold py-2.5 rounded-xl text-sm transition ${
+                  className={`flex-1 font-semibold py-2 rounded-lg text-xs transition ${
                     isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                   }`}
                 >
@@ -778,7 +817,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-[#f97316] hover:bg-orange-600 text-white font-semibold py-2.5 rounded-xl text-sm shadow-md transition"
+                  className="flex-1 bg-[#f97316] hover:bg-orange-600 text-white font-semibold py-2 rounded-lg text-xs shadow-sm transition cursor-pointer"
                 >
                   {editingProduct ? 'Update Product' : 'Save Product'}
                 </button>
@@ -790,8 +829,8 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
 
       {/* Add New Category Modal */}
       {isCategoryModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className={`${isDarkMode ? 'bg-[#1e293b] text-white border-slate-800' : 'bg-white text-gray-900 border-gray-100'} rounded-2xl shadow-2xl w-full max-w-md p-6 border relative max-h-[90vh] flex flex-col justify-between`}>
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+          <div className={`${isDarkMode ? 'bg-[#1e293b] text-white border-slate-800' : 'bg-white text-gray-900 border-gray-100'} rounded-2xl shadow-2xl w-full max-w-[310px] sm:max-w-md p-4 sm:p-6 border relative max-h-[90vh] flex flex-col justify-between`}>
             
             <div>
               <button
@@ -815,8 +854,8 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
                 </div>
               </div>
 
-              <form onSubmit={handleSaveNewCategory} className="mb-4">
-                <label className="block text-xs font-semibold mb-1.5 text-gray-700 dark:text-slate-300">
+              <form onSubmit={handleSaveNewCategory} className="mb-3">
+                <label className="block text-xs font-semibold mb-1 text-gray-700 dark:text-slate-300">
                   Category Name <span className="text-rose-500">*</span>
                 </label>
                 <div className="flex gap-2">
@@ -826,28 +865,28 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
                     placeholder="e.g. Ice Creams, Shakes, Biryani..."
                     value={newCategoryName}
                     onChange={(e) => setNewCategoryName(e.target.value)}
-                    className={`flex-1 border rounded-xl px-4 py-2.5 text-sm font-medium focus:border-amber-500 outline-none transition ${
+                    className={`flex-1 border rounded-lg px-3 py-1.5 text-xs font-medium focus:border-amber-500 outline-none transition ${
                       isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-slate-50 border-gray-200 text-gray-900'
                     }`}
                     autoFocus
                   />
                   <button
                     type="submit"
-                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2.5 rounded-xl text-sm shadow-md transition cursor-pointer flex items-center gap-1.5 shrink-0"
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs shadow-xs transition cursor-pointer flex items-center gap-1 shrink-0"
                   >
-                    <Plus className="w-4 h-4" /> Save
+                    <Plus className="w-3.5 h-3.5" /> Save
                   </button>
                 </div>
               </form>
 
               {/* Added Category List */}
-              <div className="my-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
+              <div className="my-2">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className={`text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
                     Category List ({allCategoryOptions.length})
                   </span>
                 </div>
-                <div className={`max-h-48 overflow-y-auto space-y-1.5 pr-1 rounded-xl p-2 border ${
+                <div className={`max-h-48 overflow-y-auto space-y-1 pr-1 rounded-xl p-1.5 border ${
                   isDarkMode ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50/80 border-gray-100'
                 }`}>
                   {allCategoryOptions.length === 0 ? (
@@ -856,13 +895,13 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
                     allCategoryOptions.map((cat) => (
                       <div
                         key={cat}
-                        className={`flex items-center justify-between p-2.5 rounded-xl text-sm transition ${
+                        className={`flex items-center justify-between p-2 rounded-lg text-xs transition ${
                           isDarkMode 
                             ? 'bg-slate-800/90 hover:bg-slate-800 text-slate-200 border border-slate-700/60' 
                             : 'bg-white hover:bg-gray-50 text-gray-800 border border-gray-100 shadow-2xs'
                         }`}
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <Tag className="w-3.5 h-3.5 text-amber-500" />
                           <span className="font-semibold text-xs">{cat}</span>
                         </div>
@@ -870,9 +909,9 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
                           type="button"
                           onClick={() => handleDeleteCategory(cat)}
                           title={`Delete ${cat}`}
-                          className="p-1.5 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer"
+                          className="p-1 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-md transition cursor-pointer"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     ))
@@ -880,7 +919,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
                 </div>
               </div>
 
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-xs text-amber-700 dark:text-amber-300 my-3">
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5 text-[11px] text-amber-700 dark:text-amber-300 my-2">
                 💡 <span className="font-semibold">Note:</span> Categories will immediately show up in Product forms & POS Billing category pills.
               </div>
             </div>
@@ -889,7 +928,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
               <button
                 type="button"
                 onClick={() => setIsCategoryModalOpen(false)}
-                className={`w-full font-semibold py-2.5 rounded-xl text-sm transition cursor-pointer ${
+                className={`w-full font-semibold py-2 rounded-lg text-xs transition cursor-pointer ${
                   isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                 }`}
               >

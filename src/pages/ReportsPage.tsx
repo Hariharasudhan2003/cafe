@@ -278,24 +278,24 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
         <main className="flex-1 overflow-y-auto scrollbar-none p-6 space-y-6">
           
           {/* Page Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div>
-              <h1 className={`text-2xl font-bold tracking-tight ${textHeadingClass}`}>Analytics & Reports</h1>
-              <p className={`text-sm mt-0.5 ${textSubClass}`}>Overview of sales performance, revenue & transaction history.</p>
+              <h1 className={`text-xl sm:text-2xl font-bold tracking-tight ${textHeadingClass}`}>Analytics & Reports</h1>
+              <p className={`text-xs sm:text-sm mt-0.5 ${textSubClass}`}>Overview of sales performance, revenue & transaction history.</p>
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Time Range Filter Pills */}
-              <div className={`flex items-center p-1 rounded-xl text-xs font-medium border ${
+            <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+              {/* Time Range Filter Pills (Compact Breadth & Right Aligned) */}
+              <div className={`flex items-center p-0.5 rounded-lg text-[11px] font-medium border shrink-0 ${
                 isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-200/60'
               }`}>
                 {(['Today', 'This Week', 'Monthly', 'All Time'] as const).map((range) => (
                   <button
                     key={range}
                     onClick={() => setTimeRange(range)}
-                    className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    className={`px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-xs rounded-md transition-all cursor-pointer ${
                       timeRange === range
-                        ? 'bg-[#78350f] text-white font-bold shadow-xs'
+                        ? 'bg-[#78350f] text-white font-bold shadow-2xs'
                         : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
@@ -304,73 +304,73 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
                 ))}
               </div>
 
-              {/* Export Button */}
+              {/* Export Button (Desktop Only) */}
               <button
                 onClick={handleExport}
-                className="bg-[#f97316] hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition cursor-pointer"
+                className="hidden sm:flex bg-[#f97316] hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold items-center gap-1.5 shadow-2xs transition cursor-pointer shrink-0"
               >
-                <Download className="w-4 h-4" />
+                <Download className="w-3.5 h-3.5" />
                 <span>Export PDF</span>
               </button>
             </div>
           </div>
 
-          {/* Top 4 Metric Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Top 4 Metric Cards (Compact Sizes) */}
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             
             {/* Card 1: POS Total Sales */}
-            <div className={`${cardBgClass} rounded-2xl p-5 border shadow-2xs`}>
+            <div className={`${cardBgClass} rounded-xl sm:rounded-2xl p-3 sm:p-4 border shadow-2xs`}>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">TOTAL POS SALES</span>
-                <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
-                  <TrendingUp className="w-5 h-5" />
+                <span className="text-[10px] sm:text-[11px] font-bold text-gray-400 uppercase tracking-wider">TOTAL POS SALES</span>
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
+                  <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
               </div>
-              <div className="mt-3">
-                <h3 className={`text-2xl font-extrabold ${textHeadingClass}`}>₹{posSalesVal.toLocaleString()}</h3>
-                <span className="text-xs text-emerald-500 font-semibold mt-1 block">Live POS sales only</span>
+              <div className="mt-1.5 sm:mt-2">
+                <h3 className={`text-base sm:text-xl font-extrabold ${textHeadingClass}`}>₹{posSalesVal.toLocaleString()}</h3>
+                <span className="text-[10px] sm:text-[11px] text-emerald-500 font-semibold mt-0.5 block truncate">Live POS sales only</span>
               </div>
             </div>
 
             {/* Card 2: Total Event Orders */}
-            <div className={`${cardBgClass} rounded-2xl p-5 border shadow-2xs`}>
+            <div className={`${cardBgClass} rounded-xl sm:rounded-2xl p-3 sm:p-4 border shadow-2xs`}>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">TOTAL ORDERS</span>
-                <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
-                  <ShoppingCart className="w-5 h-5" />
+                <span className="text-[10px] sm:text-[11px] font-bold text-gray-400 uppercase tracking-wider">TOTAL ORDERS</span>
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
+                  <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
               </div>
-              <div className="mt-3">
-                <h3 className={`text-2xl font-extrabold ${textHeadingClass}`}>{totalOrdersCount}</h3>
-                <span className="text-xs text-emerald-500 font-semibold mt-1 block">Function event orders count</span>
+              <div className="mt-1.5 sm:mt-2">
+                <h3 className={`text-base sm:text-xl font-extrabold ${textHeadingClass}`}>{totalOrdersCount}</h3>
+                <span className="text-[10px] sm:text-[11px] text-emerald-500 font-semibold mt-0.5 block truncate">Event orders count</span>
               </div>
             </div>
 
             {/* Card 3: Order Revenue */}
-            <div className={`${cardBgClass} rounded-2xl p-5 border shadow-2xs`}>
+            <div className={`${cardBgClass} rounded-xl sm:rounded-2xl p-3 sm:p-4 border shadow-2xs`}>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">ORDER REVENUE</span>
-                <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
-                  <Receipt className="w-5 h-5" />
+                <span className="text-[10px] sm:text-[11px] font-bold text-gray-400 uppercase tracking-wider">ORDER REVENUE</span>
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
+                  <Receipt className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
               </div>
-              <div className="mt-3">
-                <h3 className={`text-2xl font-extrabold ${textHeadingClass}`}>₹{orderRevenueVal.toLocaleString()}</h3>
-                <span className="text-xs text-amber-500 font-semibold mt-1 block">Total amount from event orders</span>
+              <div className="mt-1.5 sm:mt-2">
+                <h3 className={`text-base sm:text-xl font-extrabold ${textHeadingClass}`}>₹{orderRevenueVal.toLocaleString()}</h3>
+                <span className="text-[10px] sm:text-[11px] text-amber-500 font-semibold mt-0.5 block truncate">Event order revenue</span>
               </div>
             </div>
 
             {/* Card 4: Estimated Net Profit */}
-            <div className={`${cardBgClass} rounded-2xl p-5 border shadow-2xs`}>
+            <div className={`${cardBgClass} rounded-xl sm:rounded-2xl p-3 sm:p-4 border shadow-2xs`}>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">EST. NET PROFIT</span>
-                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-500">
-                  <Wallet className="w-5 h-5" />
+                <span className="text-[10px] sm:text-[11px] font-bold text-gray-400 uppercase tracking-wider">EST. NET PROFIT</span>
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-500">
+                  <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
               </div>
-              <div className="mt-3">
-                <h3 className={`text-2xl font-extrabold ${textHeadingClass}`}>₹{netProfitVal.toLocaleString()}</h3>
-                <span className="text-xs text-emerald-500 font-semibold mt-1 block">Est. 40% margin</span>
+              <div className="mt-1.5 sm:mt-2">
+                <h3 className={`text-base sm:text-xl font-extrabold ${textHeadingClass}`}>₹{netProfitVal.toLocaleString()}</h3>
+                <span className="text-[10px] sm:text-[11px] text-emerald-500 font-semibold mt-0.5 block truncate">Est. 40% margin</span>
               </div>
             </div>
 

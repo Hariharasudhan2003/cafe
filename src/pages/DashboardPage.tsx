@@ -43,7 +43,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   logoUrl: propLogoUrl
 }) => {
   const [activeTab, setActiveTab] = useState<string>('Dashboard');
-  const [timeFilter, setTimeFilter] = useState<'Today' | 'Week' | 'Month' | 'All'>('Today');
+  const [timeFilter, setTimeFilter] = useState<'Today' | 'Week' | 'Month'>('Today');
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
   const [showAllBills, setShowAllBills] = useState<boolean>(false);
   const [showAllTopItems] = useState<boolean>(false);
@@ -121,8 +121,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     return unique;
   }, [fetchedProducts, customCategories, deletedCategories]);
 
-  // Helper time range filter for Dashboard (Today, Week, Month, All Time)
-  const isItemInTimeFilter = (item: any, filter: 'Today' | 'Week' | 'Month' | 'All') => {
+  // Helper time range filter for Dashboard (Today, Week, Month)
+  const isItemInTimeFilter = (item: any, filter: 'Today' | 'Week' | 'Month') => {
     const now = new Date();
     const todayYear = now.getFullYear();
     const todayMonth = now.getMonth();
@@ -188,12 +188,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         itemDate.getFullYear() === todayYear &&
         itemDate.getMonth() === todayMonth
       );
-    }
-
-    if (filter === 'All') {
-      // Filter last 1 year (365 days) data strictly
-      const oneYearAgo = new Date(todayYear - 1, todayMonth, todayDate, 0, 0, 0, 0);
-      return itemDate >= oneYearAgo;
     }
 
     return true;
@@ -412,181 +406,201 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         />
 
         {/* Dashboard Scrollable Body */}
-        <main className="flex-1 overflow-y-auto scrollbar-none p-6 space-y-6">
+        <main className="flex-1 overflow-y-auto scrollbar-none p-3 sm:p-6 space-y-4 sm:space-y-6">
           
           {/* Top Filter Header Bar */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
             <div>
-              <h2 className={`text-xl font-extrabold tracking-tight ${textHeadingClass}`}>Dashboard Analytics</h2>
-              <p className={`text-xs ${textSubClass}`}>
-                Showing live data for: <span className="font-bold text-amber-500">{timeFilter === 'Today' ? "Today's Sales & Orders" : timeFilter === 'Week' ? "Weekly Sales (Past 7 Days)" : timeFilter === 'Month' ? "Monthly Sales (Current Month)" : "All Time Sales Records"}</span>
+              <h2 className={`text-lg sm:text-xl font-extrabold tracking-tight ${textHeadingClass}`}>Dashboard Analytics</h2>
+              <p className={`text-[11px] sm:text-xs ${textSubClass}`}>
+                Showing live data for: <span className="font-bold text-amber-500">{timeFilter === 'Today' ? "Today's Sales & Orders" : timeFilter === 'Week' ? "Weekly Sales (Past 7 Days)" : "Monthly Sales (Current Month)"}</span>
               </p>
             </div>
 
             {/* Global Dashboard Time Filter */}
-            <div className={`flex items-center p-1 rounded-xl text-xs font-semibold border ${
+            <div className={`flex items-center p-1 rounded-xl text-[10px] sm:text-xs font-semibold border max-w-full overflow-x-auto scrollbar-none gap-0.5 sm:gap-1 ${
               isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-amber-200/80 shadow-2xs'
             }`}>
-              <span className={`px-2.5 text-[11px] font-extrabold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-amber-900/60'}`}>
+              <span className={`px-1.5 sm:px-2.5 text-[9px] sm:text-[11px] font-extrabold uppercase tracking-wider whitespace-nowrap ${isDarkMode ? 'text-slate-400' : 'text-amber-900/60'}`}>
                 Filter:
               </span>
-              {(['Today', 'Week', 'Month', 'All'] as const).map((filter) => (
+              {(['Today', 'Week', 'Month'] as const).map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setTimeFilter(filter)}
-                  className={`px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer ${
+                  className={`px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg transition-all duration-200 cursor-pointer whitespace-nowrap ${
                     timeFilter === filter
                       ? 'bg-[#78350f] text-white font-extrabold shadow-xs'
                       : isDarkMode ? 'text-slate-300 hover:text-white hover:bg-slate-700/50' : 'text-gray-600 hover:text-gray-900 hover:bg-amber-50'
                   }`}
                 >
-                  {filter === 'Today' ? 'Today' : filter === 'Week' ? 'Weekly' : filter === 'Month' ? 'Monthly' : 'All Time'}
+                  {filter === 'Today' ? 'Today' : filter === 'Week' ? 'Weekly' : 'Monthly'}
                 </button>
               ))}
             </div>
           </div>
           
-          {/* Top 4 Stat Cards Section */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Top 4 Stat Cards Section (2x2 grid on mobile view with compact box sizes) */}
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
 
-            {/* Card 2: Bills */}
-            <div className={`${cardBgClass} rounded-xl p-5 border shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between`}>
-              <div className="flex items-center justify-between">
-                <span className={`text-xs font-semibold tracking-wide ${textSubClass}`}>
-                  {timeFilter === 'Today' ? "Today's Bills" : timeFilter === 'Week' ? "Weekly Bills" : timeFilter === 'Month' ? "Monthly Bills" : "All Bills"}
+            {/* Card 1: Bills */}
+            <div className={`${cardBgClass} rounded-xl p-3 sm:p-5 border shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between`}>
+              <div className="flex items-center justify-between gap-1">
+                <span className={`text-[11px] sm:text-xs font-semibold tracking-wide truncate ${textSubClass}`}>
+                  {timeFilter === 'Today' ? "Today's Bills" : timeFilter === 'Week' ? "Weekly Bills" : "Monthly Bills"}
                 </span>
-                <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
-                  <Receipt className="w-5 h-5" />
+                <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
+                  <Receipt className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </div>
-              <div className="mt-3">
-                <h3 className={`text-2xl font-extrabold tracking-tight ${textHeadingClass}`}>{filteredBills.length}</h3>
+              <div className="mt-1.5 sm:mt-3">
+                <h3 className={`text-base sm:text-2xl font-extrabold tracking-tight ${textHeadingClass}`}>{filteredBills.length}</h3>
               </div>
             </div>
 
-            {/* Card 3: Orders */}
-            <div className={`${cardBgClass} rounded-xl p-5 border shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between`}>
-              <div className="flex items-center justify-between">
-                <span className={`text-xs font-semibold tracking-wide ${textSubClass}`}>
-                  {timeFilter === 'Today' ? "Today's Orders" : timeFilter === 'Week' ? "Weekly Orders" : timeFilter === 'Month' ? "Monthly Orders" : "All Orders"}
+            {/* Card 2: Orders */}
+            <div className={`${cardBgClass} rounded-xl p-3 sm:p-5 border shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between`}>
+              <div className="flex items-center justify-between gap-1">
+                <span className={`text-[11px] sm:text-xs font-semibold tracking-wide truncate ${textSubClass}`}>
+                  {timeFilter === 'Today' ? "Today's Orders" : timeFilter === 'Week' ? "Weekly Orders" : "Monthly Orders"}
                 </span>
-                <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
-                  <ShoppingBag className="w-5 h-5" />
+                <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
+                  <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </div>
-              <div className="mt-3">
-                <h3 className={`text-2xl font-extrabold tracking-tight ${textHeadingClass}`}>{filteredOrders.length}</h3>
+              <div className="mt-1.5 sm:mt-3">
+                <h3 className={`text-base sm:text-2xl font-extrabold tracking-tight ${textHeadingClass}`}>{filteredOrders.length}</h3>
               </div>
             </div>
 
-            {/* Card 4: Total Products */}
-            <div className={`${cardBgClass} rounded-xl p-5 border shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between`}>
-              <div className="flex items-center justify-between">
-                <span className={`text-xs font-semibold tracking-wide ${textSubClass}`}>Total Products</span>
-                <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
-                  <Package className="w-5 h-5" />
+            {/* Card 3: Total Products */}
+            <div className={`${cardBgClass} rounded-xl p-3 sm:p-5 border shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between`}>
+              <div className="flex items-center justify-between gap-1">
+                <span className={`text-[11px] sm:text-xs font-semibold tracking-wide truncate ${textSubClass}`}>Total Products</span>
+                <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
+                  <Package className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </div>
-              <div className="mt-3">
-                <h3 className={`text-2xl font-extrabold tracking-tight ${textHeadingClass}`}>{productsCount}</h3>
+              <div className="mt-1.5 sm:mt-3">
+                <h3 className={`text-base sm:text-2xl font-extrabold tracking-tight ${textHeadingClass}`}>{productsCount}</h3>
               </div>
             </div>
 
-            {/* Card 5: Revenue */}
-            <div className={`${cardBgClass} rounded-xl p-5 border shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between`}>
-              <div className="flex items-center justify-between">
-                <span className={`text-xs font-semibold tracking-wide ${textSubClass}`}>
-                  {timeFilter === 'Today' ? "Today's Revenue" : timeFilter === 'Week' ? "Weekly Revenue" : timeFilter === 'Month' ? "Monthly Revenue" : "All Revenue"}
+            {/* Card 4: Revenue */}
+            <div className={`${cardBgClass} rounded-xl p-3 sm:p-5 border shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between`}>
+              <div className="flex items-center justify-between gap-1">
+                <span className={`text-[11px] sm:text-xs font-semibold tracking-wide truncate ${textSubClass}`}>
+                  {timeFilter === 'Today' ? "Today's Revenue" : timeFilter === 'Week' ? "Weekly Revenue" : "Monthly Revenue"}
                 </span>
-                <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-500">
-                  <Wallet className="w-5 h-5" />
+                <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-500 shrink-0">
+                  <Wallet className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </div>
-              <div className="mt-3">
-                <h3 className={`text-2xl font-extrabold tracking-tight ${textHeadingClass}`}>₹{paidRevenueVal.toLocaleString()}</h3>
+              <div className="mt-1.5 sm:mt-3">
+                <h3 className={`text-base sm:text-2xl font-extrabold tracking-tight truncate ${textHeadingClass}`}>₹{paidRevenueVal.toLocaleString()}</h3>
               </div>
             </div>
 
           </div>
 
           {/* Middle Analytics Section (Charts & Breakdown) */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             
             {/* Left Card (2 Cols): Product Sales & Revenue Bar Chart */}
-            <div className={`lg:col-span-2 ${cardBgClass} rounded-2xl p-6 border shadow-2xs flex flex-col justify-between`}>
+            <div className={`lg:col-span-2 ${cardBgClass} rounded-2xl p-4 sm:p-6 border shadow-2xs flex flex-col justify-between`}>
               
               {/* Header with Filter Buttons */}
-              <div className="flex items-center justify-between mb-6">
-                <h3 className={`text-base font-bold tracking-tight ${textHeadingClass}`}>Product Sales & Revenue</h3>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 mb-4 sm:mb-6">
+                <h3 className={`text-sm sm:text-base font-bold tracking-tight ${textHeadingClass}`}>Product Sales & Revenue</h3>
                 
                 {/* Time Filter Pills */}
-                <div className={`flex items-center p-1 rounded-full text-xs font-medium border ${
+                <div className={`flex items-center p-0.5 sm:p-1 rounded-full text-[10px] sm:text-xs font-medium border max-w-full overflow-x-auto scrollbar-none gap-0.5 ${
                   isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-200/60'
                 }`}>
-                  {(['Today', 'Week', 'Month', 'All'] as const).map((filter) => (
+                  {(['Today', 'Week', 'Month'] as const).map((filter) => (
                     <button
                       key={filter}
                       onClick={() => setTimeFilter(filter)}
-                      className={`px-3 py-1 rounded-full transition-all duration-200 cursor-pointer ${
+                      className={`px-2 py-0.5 sm:px-3 sm:py-1 rounded-full transition-all duration-200 cursor-pointer whitespace-nowrap ${
                         timeFilter === filter
                           ? 'bg-[#78350f] text-white font-semibold shadow-xs'
                           : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
-                      {filter === 'All' ? 'All Time' : filter === 'Week' ? 'Weekly' : filter === 'Month' ? 'Monthly' : 'Today'}
+                      {filter === 'Week' ? 'Weekly' : filter === 'Month' ? 'Monthly' : 'Today'}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Bar Chart Graphics Canvas */}
-              <div className="relative h-64 w-full pt-4 flex flex-col justify-between">
+              {/* Bar Chart Graphics Canvas - X-Axis 0 Baseline Alignment */}
+              <div className="w-full flex flex-col pt-2">
                 
-                {/* Grid Y-axis guides */}
-                <div className={`absolute inset-0 flex flex-col justify-between pointer-events-none text-xs font-medium ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`}>
-                  <div className={`border-b pb-1 flex justify-between ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
-                    <span>{scaleTop}</span>
+                {/* Upper Chart Plot Row (Y-axis labels + Grid lines & Bar pillars) */}
+                <div className="relative flex w-full h-44 sm:h-48">
+                  
+                  {/* Left Y-axis Guide Text labels: scaleTop down to 0 */}
+                  <div className={`w-10 sm:w-14 shrink-0 flex flex-col justify-between text-[10px] sm:text-xs font-medium pr-1.5 sm:pr-2 select-none text-right ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`}>
+                    <span className="leading-none">{scaleTop}</span>
+                    <span className="leading-none">{scaleH3}</span>
+                    <span className="leading-none">{scaleH2}</span>
+                    <span className="leading-none">{scaleH1}</span>
+                    <span className="leading-none font-bold text-amber-500">0</span>
                   </div>
-                  <div className={`border-b pb-1 flex justify-between ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
-                    <span>{scaleH3}</span>
-                  </div>
-                  <div className={`border-b pb-1 flex justify-between ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
-                    <span>{scaleH2}</span>
-                  </div>
-                  <div className={`border-b pb-1 flex justify-between ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
-                    <span>{scaleH1}</span>
-                  </div>
-                  <div className={`border-b pb-1 flex justify-between ${isDarkMode ? 'border-slate-700' : 'border-gray-200'}`}>
-                    <span>0</span>
+
+                  {/* Right Plot Area: Grid Lines + Bar Pillars resting on 0 axis */}
+                  <div className="relative flex-1 h-full min-w-0">
+                    
+                    {/* Grid Y-axis background horizontal lines */}
+                    <div className={`absolute inset-0 flex flex-col justify-between pointer-events-none ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
+                      <div className={`border-b w-full h-0 ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}></div>
+                      <div className={`border-b w-full h-0 ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}></div>
+                      <div className={`border-b w-full h-0 ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}></div>
+                      <div className={`border-b w-full h-0 ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}></div>
+                      <div className={`border-b w-full h-0 ${isDarkMode ? 'border-slate-700' : 'border-amber-500/40'}`}></div>
+                    </div>
+
+                    {/* Bar Pillars Container - Bottom touching the 0 line */}
+                    <div className="relative z-10 h-full flex items-end justify-around gap-1.5 sm:gap-4 px-1 sm:px-4 overflow-x-auto scrollbar-none">
+                      {barsData.map((bar, idx) => (
+                        <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group min-w-[36px] sm:min-w-[48px] relative">
+                          
+                          {/* Tooltip on hover */}
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[10px] sm:text-[11px] font-semibold py-0.5 px-2 rounded-md mb-1 shadow-md pointer-events-none whitespace-nowrap absolute -top-7 z-20">
+                            ₹{bar.amount.toLocaleString()}
+                          </div>
+
+                          {/* Bar Pillar touching 0 line */}
+                          <div 
+                            style={{ height: bar.height }}
+                            className="w-full max-w-[32px] sm:max-w-[48px] bg-gradient-to-t from-[#78350f] via-amber-600 to-amber-500 rounded-t-md sm:rounded-t-lg shadow-xs group-hover:from-amber-700 group-hover:to-orange-400 transition-all duration-300 relative overflow-hidden"
+                          >
+                            <div className="absolute top-0 inset-x-0 h-1 bg-amber-300/40"></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
                   </div>
                 </div>
 
-                {/* Bars Plotting */}
-                <div className="relative z-10 h-48 mt-4 ml-10 flex items-end justify-around gap-4 px-4">
-                  {barsData.map((bar, idx) => (
-                    <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group">
-                      
-                      {/* Tooltip on hover */}
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[11px] font-semibold py-1 px-2.5 rounded-md mb-2 shadow-md pointer-events-none whitespace-nowrap">
-                        ₹{bar.amount.toLocaleString()}
-                      </div>
+                {/* Lower X-axis Category Labels Row (Below 0 baseline) */}
+                <div className="flex w-full mt-2">
+                  {/* Left spacer matching Y-axis width */}
+                  <div className="w-10 sm:w-14 shrink-0"></div>
 
-                      {/* Bar Pillar */}
-                      <div 
-                        style={{ height: bar.height }}
-                        className="w-full max-w-[48px] bg-gradient-to-t from-[#78350f] via-amber-600 to-amber-500 rounded-t-lg shadow-xs group-hover:from-amber-700 group-hover:to-orange-400 transition-all duration-300 relative overflow-hidden"
-                      >
-                        <div className="absolute top-0 inset-x-0 h-1 bg-amber-300/40"></div>
+                  {/* Category Labels aligned under each bar pillar */}
+                  <div className="flex-1 flex justify-around gap-1.5 sm:gap-4 px-1 sm:px-4 overflow-x-auto scrollbar-none">
+                    {barsData.map((bar, idx) => (
+                      <div key={idx} className="flex-1 text-center min-w-[36px] sm:min-w-[48px]">
+                        <span className={`text-[10px] sm:text-xs font-medium block truncate max-w-full ${
+                          isDarkMode ? 'text-slate-400' : 'text-gray-500'
+                        }`} title={bar.label}>
+                          {bar.label}
+                        </span>
                       </div>
-
-                      {/* Label under bar */}
-                      <span className={`text-xs font-medium mt-3 transition-colors ${
-                        isDarkMode ? 'text-slate-400 group-hover:text-amber-400' : 'text-gray-500 group-hover:text-gray-900'
-                      }`}>
-                        {bar.label}
-                      </span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
 
               </div>
@@ -594,22 +608,22 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             </div>
 
             {/* Right Card (1 Col): Sales by Category */}
-            <div className={`${cardBgClass} rounded-2xl p-6 border shadow-2xs flex flex-col justify-between`}>
+            <div className={`${cardBgClass} rounded-2xl p-4 sm:p-6 border shadow-2xs flex flex-col justify-between`}>
               
-              <h3 className={`text-base font-bold tracking-tight mb-5 ${textHeadingClass}`}>
+              <h3 className={`text-sm sm:text-base font-bold tracking-tight mb-3 sm:mb-5 ${textHeadingClass}`}>
                 Sales by Category
               </h3>
 
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {categoriesData.map((cat) => (
-                  <div key={cat.name} className="space-y-1.5">
-                    <div className={`flex items-center justify-between text-xs font-semibold ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
+                  <div key={cat.name} className="space-y-1 sm:space-y-1.5">
+                    <div className={`flex items-center justify-between text-[11px] sm:text-xs font-semibold ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                       <span>{cat.name}</span>
                       <span className={`font-bold ${textHeadingClass}`}>{cat.percentage}%</span>
                     </div>
                     
                     {/* Progress Track */}
-                    <div className={`w-full h-2.5 rounded-full overflow-hidden ${isDarkMode ? 'bg-slate-800' : 'bg-gray-100'}`}>
+                    <div className={`w-full h-2 sm:h-2.5 rounded-full overflow-hidden ${isDarkMode ? 'bg-slate-800' : 'bg-gray-100'}`}>
                       <div 
                         className={`h-full rounded-full transition-all duration-500 ${cat.color}`}
                         style={{ width: `${cat.percentage}%` }}
@@ -619,8 +633,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 ))}
               </div>
 
-              <div className={`mt-4 pt-4 border-t text-center ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
-                <span className={`text-xs font-medium ${textSubClass}`}>
+              <div className={`mt-3 sm:mt-4 pt-3 sm:pt-4 border-t text-center ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
+                <span className={`text-[11px] sm:text-xs font-medium ${textSubClass}`}>
                   Updated live from actual sales
                 </span>
               </div>
@@ -630,19 +644,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </div>
 
           {/* Bottom Tables Section (Top Selling Items & Recent Bills) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
             
             {/* Left Box (5 cols): Top Selling Items */}
-            <div className={`lg:col-span-5 ${cardBgClass} rounded-2xl p-6 border shadow-2xs flex flex-col justify-between`}>
+            <div className={`lg:col-span-5 ${cardBgClass} rounded-2xl p-4 sm:p-6 border shadow-2xs flex flex-col justify-between`}>
               
-              <div className="flex items-center justify-between mb-4">
-                <h3 className={`text-base font-bold tracking-tight ${textHeadingClass}`}>
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <h3 className={`text-sm sm:text-base font-bold tracking-tight ${textHeadingClass}`}>
                   Top Selling Items
                 </h3>
                 {allTopItems.length > 0 && (
                   <button 
                     onClick={() => setShowTopItemsModal(true)}
-                    className="text-xs font-bold text-amber-500 hover:text-amber-600 hover:underline transition cursor-pointer flex items-center gap-1"
+                    className="text-[11px] sm:text-xs font-bold text-amber-500 hover:text-amber-600 hover:underline transition cursor-pointer flex items-center gap-1"
                   >
                     <span>View More</span>
                     <ChevronRight className="w-3.5 h-3.5" />
@@ -650,28 +664,28 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 )}
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto scrollbar-none">
                 {allTopItems.length === 0 ? (
                   <p className={`text-xs py-6 text-center ${textSubClass}`}>
-                    No sales recorded {timeFilter === 'Today' ? 'today' : timeFilter === 'Week' ? 'this week' : timeFilter === 'Month' ? 'this month' : 'all time'}.
+                    No sales recorded {timeFilter === 'Today' ? 'today' : timeFilter === 'Week' ? 'this week' : 'this month'}.
                   </p>
                 ) : (
-                  <table className="w-full text-left border-collapse">
+                  <table className="w-full text-left border-collapse min-w-[300px]">
                     <thead>
-                      <tr className={`border-b text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-slate-800 text-slate-500' : 'border-gray-100 text-gray-400'}`}>
-                        <th className="pb-3 pr-2">Product</th>
-                        <th className="pb-3 px-2">Category</th>
-                        <th className="pb-3 px-2 text-right">Qty Sold</th>
-                        <th className="pb-3 pl-2 text-right">Revenue</th>
+                      <tr className={`border-b text-[10px] sm:text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-slate-800 text-slate-500' : 'border-gray-100 text-gray-400'}`}>
+                        <th className="pb-2.5 pr-2">Product</th>
+                        <th className="pb-2.5 px-2">Category</th>
+                        <th className="pb-2.5 px-2 text-right">Qty</th>
+                        <th className="pb-2.5 pl-2 text-right">Revenue</th>
                       </tr>
                     </thead>
-                    <tbody className={`divide-y text-xs ${isDarkMode ? 'divide-slate-800' : 'divide-gray-50'}`}>
+                    <tbody className={`divide-y text-[11px] sm:text-xs ${isDarkMode ? 'divide-slate-800' : 'divide-gray-50'}`}>
                       {visibleTopItems.map((item, idx) => (
                         <tr key={idx} className={isDarkMode ? 'hover:bg-slate-800/60' : 'hover:bg-amber-50/40'}>
-                          <td className={`py-3 pr-2 font-semibold ${textHeadingClass}`}>{item.name}</td>
-                          <td className={`py-3 px-2 ${textSubClass}`}>{item.category}</td>
-                          <td className={`py-3 px-2 text-right font-medium ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>{item.qty}</td>
-                          <td className={`py-3 pl-2 text-right font-bold ${textHeadingClass}`}>{item.revenue}</td>
+                          <td className={`py-2.5 pr-2 font-semibold ${textHeadingClass}`}>{item.name}</td>
+                          <td className={`py-2.5 px-2 ${textSubClass}`}>{item.category}</td>
+                          <td className={`py-2.5 px-2 text-right font-medium ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>{item.qty}</td>
+                          <td className={`py-2.5 pl-2 text-right font-bold ${textHeadingClass}`}>{item.revenue}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -682,62 +696,62 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             </div>
 
             {/* Right Box (7 cols): Recent Bills */}
-            <div className={`lg:col-span-7 ${cardBgClass} rounded-2xl p-6 border shadow-2xs flex flex-col justify-between`}>
+            <div className={`lg:col-span-7 ${cardBgClass} rounded-2xl p-4 sm:p-6 border shadow-2xs flex flex-col justify-between`}>
               
-              <div className="flex items-center justify-between mb-4">
-                <h3 className={`text-base font-bold tracking-tight ${textHeadingClass}`}>
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <h3 className={`text-sm sm:text-base font-bold tracking-tight ${textHeadingClass}`}>
                   Recent Bills
                 </h3>
                 {formattedBills.length > 6 && (
                   <button 
                     onClick={() => setShowAllBills(!showAllBills)}
-                    className="text-xs font-bold text-amber-500 hover:underline transition cursor-pointer"
+                    className="text-[11px] sm:text-xs font-bold text-amber-500 hover:underline transition cursor-pointer"
                   >
                     {showAllBills ? 'Show Less' : 'View More'}
                   </button>
                 )}
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto scrollbar-none">
                 {formattedBills.length === 0 ? (
                   <p className={`text-xs py-6 text-center ${textSubClass}`}>
-                    No bills created {timeFilter === 'Today' ? 'today' : timeFilter === 'Week' ? 'this week' : timeFilter === 'Month' ? 'this month' : 'in selected period'}.
+                    No bills created {timeFilter === 'Today' ? 'today' : timeFilter === 'Week' ? 'this week' : 'this month'}.
                   </p>
                 ) : (
-                  <table className="w-full text-left border-collapse">
+                  <table className="w-full text-left border-collapse min-w-[550px]">
                     <thead>
-                      <tr className={`border-b text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-slate-800 text-slate-500' : 'border-gray-100 text-gray-400'}`}>
-                        <th className="pb-3 pr-2">Bill No</th>
-                        <th className="pb-3 px-2">Customer</th>
-                        <th className="pb-3 px-2 text-center">Items</th>
-                        <th className="pb-3 px-2">Amount</th>
-                        <th className="pb-3 px-2">Payment</th>
-                        <th className="pb-3 px-2">Status</th>
-                        <th className="pb-3 px-2">Date</th>
-                        <th className="pb-3 pl-2 text-center">Actions</th>
+                      <tr className={`border-b text-[10px] sm:text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'border-slate-800 text-slate-500' : 'border-gray-100 text-gray-400'}`}>
+                        <th className="pb-2.5 pr-2">Bill No</th>
+                        <th className="pb-2.5 px-2">Customer</th>
+                        <th className="pb-2.5 px-2 text-center">Items</th>
+                        <th className="pb-2.5 px-2">Amount</th>
+                        <th className="pb-2.5 px-2">Payment</th>
+                        <th className="pb-2.5 px-2">Status</th>
+                        <th className="pb-2.5 px-2">Date</th>
+                        <th className="pb-2.5 pl-2 text-center">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className={`divide-y text-xs ${isDarkMode ? 'divide-slate-800' : 'divide-gray-50'}`}>
+                    <tbody className={`divide-y text-[11px] sm:text-xs ${isDarkMode ? 'divide-slate-800' : 'divide-gray-50'}`}>
                       {formattedBills.slice(0, showAllBills ? formattedBills.length : 6).map((bill) => (
                         <tr key={bill.id} className={isDarkMode ? 'hover:bg-slate-800/60' : 'hover:bg-amber-50/40'}>
-                          <td className={`py-3.5 pr-2 font-bold ${textHeadingClass}`}>{bill.id}</td>
-                          <td className={`py-3.5 px-2 font-medium ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>{bill.customer}</td>
-                          <td className={`py-3.5 px-2 text-center ${textSubClass}`}>{bill.items}</td>
-                          <td className={`py-3.5 px-2 font-bold ${textHeadingClass}`}>₹{bill.amount.toLocaleString()}</td>
-                          <td className={`py-3.5 px-2 ${textSubClass}`}>{bill.payment}</td>
-                          <td className="py-3.5 px-2">
+                          <td className={`py-2.5 pr-2 font-bold ${textHeadingClass}`}>{bill.id}</td>
+                          <td className={`py-2.5 px-2 font-medium ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>{bill.customer}</td>
+                          <td className={`py-2.5 px-2 text-center ${textSubClass}`}>{bill.items}</td>
+                          <td className={`py-2.5 px-2 font-bold ${textHeadingClass}`}>₹{bill.amount.toLocaleString()}</td>
+                          <td className={`py-2.5 px-2 ${textSubClass}`}>{bill.payment}</td>
+                          <td className="py-2.5 px-2">
                             {bill.status === 'Paid' ? (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
                                 Paid
                               </span>
                             ) : (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-100 text-rose-800 border border-rose-200">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold bg-rose-100 text-rose-800 border border-rose-200">
                                 Pending
                               </span>
                             )}
                           </td>
-                          <td className={`py-3.5 px-2 ${textSubClass}`}>{bill.date}</td>
-                          <td className="py-3.5 pl-2 text-center">
+                          <td className={`py-2.5 px-2 ${textSubClass}`}>{bill.date}</td>
+                          <td className="py-2.5 pl-2 text-center">
                             <button
                               onClick={() => setSelectedBill(bill)}
                               className={`p-1.5 rounded-lg transition cursor-pointer ${
@@ -745,7 +759,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                               }`}
                               title="View Bill Details"
                             >
-                              <Eye className="w-4 h-4" />
+                              <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </button>
                           </td>
                         </tr>
@@ -833,21 +847,21 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
       {/* Top Selling Items Full Detail View Modal */}
       {showTopItemsModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className={`${isDarkMode ? 'bg-[#1e293b] text-white border-slate-800' : 'bg-white text-gray-900 border-gray-100'} rounded-2xl shadow-2xl w-full max-w-3xl p-6 border relative max-h-[85vh] flex flex-col`}>
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+          <div className={`${isDarkMode ? 'bg-[#1e293b] text-white border-slate-800' : 'bg-white text-gray-900 border-gray-100'} rounded-2xl shadow-2xl w-full max-w-3xl p-4 sm:p-6 border relative max-h-[90vh] flex flex-col`}>
             
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-gray-200/40 dark:border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 font-bold">
-                  <Award className="w-5 h-5" />
+            <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-gray-200/40 dark:border-slate-800">
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 font-bold shrink-0">
+                  <Award className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 <div>
-                  <h3 className={`text-lg font-bold ${textHeadingClass}`}>
+                  <h3 className={`text-base sm:text-lg font-bold ${textHeadingClass}`}>
                     Top Selling Items Detailed Report
                   </h3>
-                  <p className={`text-xs ${textSubClass}`}>
-                    Full ranking & sales breakdown for: <span className="font-bold text-amber-500">{timeFilter === 'Today' ? "Today" : timeFilter === 'Week' ? "This Week" : timeFilter === 'Month' ? "This Month" : "All Time (Past 1 Year)"}</span>
+                  <p className={`text-[11px] sm:text-xs ${textSubClass}`}>
+                    Full ranking & sales breakdown for: <span className="font-bold text-amber-500">{timeFilter === 'Today' ? "Today" : timeFilter === 'Week' ? "This Week" : "This Month"}</span>
                   </p>
                 </div>
               </div>
@@ -873,7 +887,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             </div>
 
             {/* Filter Search Toolbar */}
-            <div className="py-4 flex flex-col sm:flex-row gap-3 items-center justify-between border-b border-gray-100 dark:border-slate-800/80">
+            <div className="py-3 sm:py-4 flex flex-col sm:flex-row gap-2.5 sm:gap-3 items-center justify-between border-b border-gray-100 dark:border-slate-800/80">
               <div className="relative w-full sm:w-64">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
@@ -887,7 +901,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 />
               </div>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
                 <span className={`text-xs font-medium ${textSubClass}`}>Category:</span>
                 <select
                   value={topItemsCategoryFilter}
@@ -911,48 +925,50 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   No top items match your search or filter.
                 </p>
               ) : (
-                <table className="w-full text-left border-collapse">
-                  <thead className="sticky top-0 z-10">
-                    <tr className={`border-b text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'bg-[#1e293b] border-slate-800 text-slate-400' : 'bg-white border-gray-200 text-gray-500'}`}>
-                      <th className="py-2.5 pr-2 w-16 text-center">Rank</th>
-                      <th className="py-2.5 px-2">Product Name</th>
-                      <th className="py-2.5 px-2">Category</th>
-                      <th className="py-2.5 px-2 text-right">Qty Sold</th>
-                      <th className="py-2.5 pl-2 text-right">Total Revenue</th>
-                    </tr>
-                  </thead>
-                  <tbody className={`divide-y text-xs ${isDarkMode ? 'divide-slate-800' : 'divide-gray-100'}`}>
-                    {modalFilteredTopItems.map((item, idx) => (
-                      <tr key={idx} className={isDarkMode ? 'hover:bg-slate-800/60' : 'hover:bg-amber-50/50'}>
-                        <td className="py-3 pr-2 text-center">
-                          <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-[11px] font-black ${
-                            idx === 0 ? 'bg-amber-100 text-amber-800 border border-amber-300' :
-                            idx === 1 ? 'bg-slate-200 text-slate-800 border border-slate-300' :
-                            idx === 2 ? 'bg-orange-100 text-orange-800 border border-orange-300' :
-                            isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-gray-100 text-gray-600'
-                          }`}>
-                            {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
-                          </span>
-                        </td>
-                        <td className={`py-3 px-2 font-bold ${textHeadingClass}`}>{item.name}</td>
-                        <td className={`py-3 px-2 ${textSubClass}`}>
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/10 text-amber-600 border border-amber-500/20">
-                            {item.category}
-                          </span>
-                        </td>
-                        <td className={`py-3 px-2 text-right font-extrabold ${textHeadingClass}`}>{item.qty} units</td>
-                        <td className={`py-3 pl-2 text-right font-extrabold text-amber-500`}>{item.revenue}</td>
+                <div className="overflow-x-auto scrollbar-none">
+                  <table className="w-full text-left border-collapse min-w-[420px]">
+                    <thead className="sticky top-0 z-10">
+                      <tr className={`border-b text-[10px] sm:text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'bg-[#1e293b] border-slate-800 text-slate-400' : 'bg-white border-gray-200 text-gray-500'}`}>
+                        <th className="py-2.5 pr-2 w-14 text-center">Rank</th>
+                        <th className="py-2.5 px-2">Product Name</th>
+                        <th className="py-2.5 px-2">Category</th>
+                        <th className="py-2.5 px-2 text-right">Qty Sold</th>
+                        <th className="py-2.5 pl-2 text-right">Total Revenue</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className={`divide-y text-xs ${isDarkMode ? 'divide-slate-800' : 'divide-gray-100'}`}>
+                      {modalFilteredTopItems.map((item, idx) => (
+                        <tr key={idx} className={isDarkMode ? 'hover:bg-slate-800/60' : 'hover:bg-amber-50/50'}>
+                          <td className="py-2.5 pr-2 text-center">
+                            <span className={`inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full text-[10px] sm:text-[11px] font-black ${
+                              idx === 0 ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+                              idx === 1 ? 'bg-slate-200 text-slate-800 border border-slate-300' :
+                              idx === 2 ? 'bg-orange-100 text-orange-800 border border-orange-300' :
+                              isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
+                            </span>
+                          </td>
+                          <td className={`py-2.5 px-2 font-bold ${textHeadingClass}`}>{item.name}</td>
+                          <td className={`py-2.5 px-2 ${textSubClass}`}>
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                              {item.category}
+                            </span>
+                          </td>
+                          <td className={`py-2.5 px-2 text-right font-extrabold ${textHeadingClass}`}>{item.qty} units</td>
+                          <td className={`py-2.5 pl-2 text-right font-extrabold text-amber-500`}>{item.revenue}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
 
             {/* Modal Footer */}
             <div className="pt-3 border-t border-gray-200/40 dark:border-slate-800 flex justify-between items-center text-xs">
               <span className={`font-semibold ${textSubClass}`}>
-                Total Ranked Products: <span className="font-extrabold text-amber-500">{modalFilteredTopItems.length}</span>
+                Ranked: <span className="font-extrabold text-amber-500">{modalFilteredTopItems.length}</span>
               </span>
               
               <div className="flex gap-2">
@@ -961,14 +977,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     setShowTopItemsModal(false);
                     handleTabChange('Reports');
                   }}
-                  className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-[11px] sm:text-xs flex items-center gap-1.5 transition cursor-pointer shadow-xs"
                 >
                   <BarChart3 className="w-3.5 h-3.5" />
-                  <span>Open Reports Page</span>
+                  <span>Reports</span>
                 </button>
                 <button
                   onClick={() => setShowTopItemsModal(false)}
-                  className={`px-4 font-semibold py-2 rounded-xl text-xs transition cursor-pointer ${
+                  className={`px-3 py-1.5 sm:px-4 sm:py-2 font-semibold rounded-xl text-[11px] sm:text-xs transition cursor-pointer ${
                     isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                   }`}
                 >

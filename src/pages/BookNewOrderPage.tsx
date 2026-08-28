@@ -12,7 +12,8 @@ import {
   X,
   User,
   Phone,
-  MapPin
+  MapPin,
+  ArrowLeft
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { Navbar } from '../components/Navbar';
@@ -488,11 +489,12 @@ export const BookNewOrderPage: React.FC<BookNewOrderPageProps> = ({
 
             <button
               onClick={handleBack}
-              className={`border font-semibold px-4 py-2 rounded-xl text-xs shadow-2xs transition cursor-pointer ${
+              className={`border font-semibold px-3 py-1.5 rounded-lg text-xs shadow-2xs transition cursor-pointer flex items-center gap-1.5 ${
                 isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
               }`}
             >
-              Cancel & Go Back
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back</span>
             </button>
           </div>
 
@@ -696,8 +698,8 @@ export const BookNewOrderPage: React.FC<BookNewOrderPageProps> = ({
                     )}
                   </div>
 
-                  {/* Quantity Input */}
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                  {/* Quantity Input & Add Button Container */}
+                  <div className="flex items-center gap-1.5 w-full sm:w-auto shrink-0 justify-end">
                     <span className={`text-xs font-semibold ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Qty:</span>
                     <input
                       ref={qtyInputRef}
@@ -708,15 +710,15 @@ export const BookNewOrderPage: React.FC<BookNewOrderPageProps> = ({
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => setAddQty(e.target.value)}
                       onKeyDown={handleQtyKeyDown}
-                      className={`w-20 border rounded-xl px-3 py-2 text-xs font-bold text-center outline-none transition ${
+                      className={`w-16 sm:w-20 border rounded-lg px-2.5 py-1.5 text-xs font-bold text-center outline-none transition ${
                         isDarkMode ? 'bg-[#1e293b] border-slate-700 text-white focus:border-amber-500' : 'bg-white border-gray-200 text-gray-900 focus:border-amber-500 shadow-2xs'
                       }`}
                     />
 
-                    {/* Add to Order Button */}
+                    {/* Add to Order Button (Compact & Responsive) */}
                     <button
                       onClick={handleAddProductToOrder}
-                      className="bg-[#f97316] hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 shadow-sm transition active:scale-[0.98] w-full sm:w-auto shrink-0 cursor-pointer"
+                      className="bg-[#f97316] hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 shadow-xs transition active:scale-[0.98] shrink-0 cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>Add</span>

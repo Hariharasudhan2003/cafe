@@ -11,7 +11,8 @@ import {
   Trash2, 
   X, 
   CheckCircle2,
-  Printer
+  Printer,
+  Search
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { Navbar } from '../components/Navbar';
@@ -70,6 +71,12 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
   const [isBookingMode, setIsBookingMode] = useState<boolean>(false);
   const [activeReceipt, setActiveReceipt] = useState<ReceiptData | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  
+  // Filter & Search State
+  const [showFilterBar, setShowFilterBar] = useState<boolean>(false);
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Completed' | 'Cancelled'>('All');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   const [settings, setSettings] = useState({
     cafeName: cafeName || 'BrewMaster',
     branchLocation: branchLocation || 'Downtown Branch',
@@ -169,6 +176,16 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
 
   // Data Analysis for Function Revenue & Orders
   const activeOrders = eventOrders.filter(o => o.status !== 'Cancelled');
+  const filteredOrders = eventOrders.filter((order) => {
+    const matchesStatus = statusFilter === 'All' || order.status === statusFilter;
+    const query = searchQuery.toLowerCase().trim();
+    const matchesSearch = !query || 
+      order.customer.toLowerCase().includes(query) || 
+      order.code.toLowerCase().includes(query) || 
+      order.items.toLowerCase().includes(query) ||
+      (order.subDetail && order.subDetail.toLowerCase().includes(query));
+    return matchesStatus && matchesSearch;
+  });
   const activeFunctionRevenue = activeOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
   const totalAdvanceCollected = activeOrders.reduce((sum, o) => sum + (o.advanceReceived || 0), 0);
   const totalBalanceDuePending = activeOrders.reduce((sum, o) => sum + (o.balanceDue !== undefined ? o.balanceDue : Math.max(0, (o.amount || 0) - (o.advanceReceived || 0))), 0);
@@ -365,9 +382,6 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
     });
   };
 
-  // Mobile Sidebar State
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
-
   return (
     <div className={`flex h-screen font-sans overflow-hidden transition-colors duration-200 ${
       isDarkMode ? 'bg-[#0f172a] text-slate-100' : 'bg-[#f8fafc] text-gray-800'
@@ -445,56 +459,56 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
             </div>
           </div>
 
-          {/* Top 3 Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Top 3 Summary Cards (Compact Sizes) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             
             {/* Card 1: Total Orders */}
-            <div className={`rounded-2xl p-5 border shadow-2xs hover:shadow-md transition-all duration-200 flex items-center gap-4 ${
+            <div className={`rounded-xl sm:rounded-2xl p-3.5 sm:p-4 border shadow-2xs hover:shadow-md transition-all duration-200 flex items-center gap-3 ${
               isDarkMode ? 'bg-[#1e293b] border-slate-800 text-white' : 'bg-white border-orange-100/80 text-gray-900'
             }`}>
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
-                <Truck className="w-6 h-6" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
+                <Truck className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div>
-                <span className="text-[11px] font-bold text-gray-400 tracking-wider uppercase block">TOTAL ORDERS</span>
-                <h3 className={`text-2xl font-extrabold tracking-tight mt-0.5 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{eventOrders.length}</h3>
-                <span className="text-[11px] font-semibold text-gray-500 block mt-0.5">
+                <span className="text-[10px] sm:text-[11px] font-bold text-gray-400 tracking-wider uppercase block">TOTAL ORDERS</span>
+                <h3 className={`text-lg sm:text-xl font-extrabold tracking-tight mt-0.5 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{eventOrders.length}</h3>
+                <span className="text-[10px] sm:text-[11px] font-semibold text-gray-500 block mt-0.5">
                   {eventOrders.filter(o => o.status === 'Completed').length} Done · {eventOrders.filter(o => o.status === 'Pending').length} Pending
                 </span>
               </div>
             </div>
 
             {/* Card 2: Pending Pre-Orders */}
-            <div className={`rounded-2xl p-5 border shadow-2xs hover:shadow-md transition-all duration-200 flex items-center gap-4 ${
+            <div className={`rounded-xl sm:rounded-2xl p-3.5 sm:p-4 border shadow-2xs hover:shadow-md transition-all duration-200 flex items-center gap-3 ${
               isDarkMode ? 'bg-[#1e293b] border-slate-800 text-white' : 'bg-white border-orange-100/80 text-gray-900'
             }`}>
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
-                <Clock className="w-6 h-6" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div>
-                <span className="text-[11px] font-bold text-gray-400 tracking-wider uppercase block">PENDING PRE-ORDERS</span>
-                <h3 className={`text-2xl font-extrabold tracking-tight mt-0.5 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                <span className="text-[10px] sm:text-[11px] font-bold text-gray-400 tracking-wider uppercase block">PENDING PRE-ORDERS</span>
+                <h3 className={`text-lg sm:text-xl font-extrabold tracking-tight mt-0.5 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                   {eventOrders.filter(o => o.status === 'Pending').length}
                 </h3>
-                <span className="text-[11px] font-semibold text-amber-600 block mt-0.5">
+                <span className="text-[10px] sm:text-[11px] font-semibold text-amber-600 block mt-0.5">
                   Awaiting Event Delivery
                 </span>
               </div>
             </div>
 
             {/* Card 3: Analyzed Total Function Revenue */}
-            <div className={`rounded-2xl p-5 border shadow-2xs hover:shadow-md transition-all duration-200 flex items-center gap-4 ${
+            <div className={`rounded-xl sm:rounded-2xl p-3.5 sm:p-4 border shadow-2xs hover:shadow-md transition-all duration-200 flex items-center gap-3 ${
               isDarkMode ? 'bg-[#1e293b] border-slate-800 text-white' : 'bg-white border-orange-100/80 text-gray-900'
             }`}>
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-500 shrink-0">
-                <Wallet className="w-6 h-6" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-500 shrink-0">
+                <Wallet className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div>
-                <span className="text-[11px] font-bold text-gray-400 tracking-wider uppercase block">TOTAL FUNCTION REV</span>
-                <h3 className={`text-2xl font-extrabold tracking-tight mt-0.5 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                <span className="text-[10px] sm:text-[11px] font-bold text-gray-400 tracking-wider uppercase block">TOTAL FUNCTION REV</span>
+                <h3 className={`text-lg sm:text-xl font-extrabold tracking-tight mt-0.5 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                   ₹{activeFunctionRevenue.toLocaleString()}
                 </h3>
-                <span className="text-[11px] font-semibold text-emerald-600 block mt-0.5">
+                <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-600 block mt-0.5">
                   Rec: ₹{totalAdvanceCollected.toLocaleString()} · Due: ₹{totalBalanceDuePending.toLocaleString()}
                 </span>
               </div>
@@ -507,12 +521,80 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
             isDarkMode ? 'bg-[#1e293b] border-slate-800 text-white' : 'bg-white border-gray-200/80 text-gray-900'
           }`}>
             
-            <div className={`p-5 border-b flex items-center justify-between ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
-              <h3 className={`text-base font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Event Orders</h3>
-              <button className={`p-1.5 rounded-lg transition ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}>
-                <Filter className="w-4 h-4" />
+            <div className={`p-4 border-b flex items-center justify-between ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
+              <div className="flex items-center gap-2">
+                <h3 className={`text-sm sm:text-base font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Event Orders</h3>
+                <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                  isDarkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-gray-600'
+                }`}>
+                  {filteredOrders.length}
+                </span>
+              </div>
+
+              {/* Interactive Filter Button */}
+              <button 
+                onClick={() => setShowFilterBar(!showFilterBar)}
+                className={`px-2.5 py-1 rounded-lg transition cursor-pointer flex items-center gap-1.5 text-xs font-semibold ${
+                  showFilterBar || statusFilter !== 'All' || searchQuery
+                    ? 'bg-amber-500 text-white shadow-2xs'
+                    : (isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border border-gray-200')
+                }`}
+                title="Click to filter orders"
+              >
+                <Filter className="w-3.5 h-3.5" />
+                <span>Filter</span>
+                {(statusFilter !== 'All' || searchQuery) && (
+                  <span className="w-2 h-2 rounded-full bg-amber-200 animate-pulse" />
+                )}
               </button>
             </div>
+
+            {/* Filter Controls Drawer Bar */}
+            {showFilterBar && (
+              <div className={`p-3 border-b flex flex-col sm:flex-row items-center justify-between gap-3 text-xs animate-in fade-in duration-150 ${
+                isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50/80 border-gray-100'
+              }`}>
+                {/* Search Input */}
+                <div className="relative w-full sm:w-64">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search orders, customer..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className={`w-full pl-8 pr-7 py-1.5 rounded-lg text-xs outline-none border transition ${
+                      isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-amber-500' : 'bg-white border-gray-200 text-gray-800 focus:border-amber-500'
+                    }`}
+                  />
+                  {searchQuery && (
+                    <button 
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Status Filter Pills */}
+                <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-0.5">
+                  <span className={`text-[11px] font-bold uppercase tracking-wider mr-1 shrink-0 ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Status:</span>
+                  {(['All', 'Pending', 'Completed', 'Cancelled'] as const).map((st) => (
+                    <button
+                      key={st}
+                      onClick={() => setStatusFilter(st)}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer shrink-0 ${
+                        statusFilter === st
+                          ? 'bg-amber-500 text-white shadow-2xs font-bold'
+                          : (isDarkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200')
+                      }`}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
@@ -520,38 +602,38 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
                   <tr className={`border-b text-[11px] font-extrabold uppercase tracking-wider ${
                     isDarkMode ? 'bg-slate-800/80 border-slate-800 text-white' : 'bg-slate-50/50 border-gray-100 text-gray-400'
                   }`}>
-                    <th className="py-4 px-5">ORDER ID</th>
-                    <th className="py-4 px-4">CUSTOMER</th>
-                    <th className="py-4 px-4">EVENT DATE</th>
-                    <th className="py-4 px-4">ITEMS</th>
-                    <th className="py-4 px-4">AMOUNT</th>
-                    <th className="py-4 px-4">STATUS</th>
-                    <th className="py-4 px-5 text-center">ACTION</th>
+                    <th className="py-3 px-4">ORDER ID</th>
+                    <th className="py-3 px-4">CUSTOMER</th>
+                    <th className="py-3 px-4">EVENT DATE</th>
+                    <th className="py-3 px-4">ITEMS</th>
+                    <th className="py-3 px-4">AMOUNT</th>
+                    <th className="py-3 px-4">STATUS</th>
+                    <th className="py-3 px-4 text-center">ACTION</th>
                   </tr>
                 </thead>
                 <tbody className={`divide-y text-xs ${isDarkMode ? 'divide-slate-800' : 'divide-gray-100'}`}>
-                  {eventOrders.length === 0 ? (
+                  {filteredOrders.length === 0 ? (
                     <tr>
                       <td colSpan={7} className={`py-8 text-center font-medium ${isDarkMode ? 'text-slate-300' : 'text-gray-400'}`}>
-                        No event orders booked yet. Click "Book New Order" to create one.
+                        No matching event orders found.
                       </td>
                     </tr>
                   ) : (
-                    eventOrders.map((order) => (
+                    filteredOrders.map((order) => (
                       <tr key={order.id} className={`transition-colors ${isDarkMode ? 'hover:bg-slate-800/60' : 'hover:bg-amber-50/30'}`}>
                         {/* ORDER ID */}
-                        <td className={`py-4 px-5 font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        <td className={`py-3 px-4 font-semibold ${isDarkMode ? 'text-slate-200' : 'text-gray-600'}`}>
                           {order.code}
                         </td>
 
                         {/* CUSTOMER */}
-                        <td className={`py-4 px-4 font-bold text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        <td className={`py-3 px-4 font-bold text-xs ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                           {order.customer}
-                          <span className={`block text-xs font-normal mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>{order.subDetail}</span>
+                          <span className={`block text-[11px] font-normal mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-gray-400'}`}>{order.subDetail}</span>
                         </td>
 
                         {/* EVENT DATE */}
-                        <td className={`py-4 px-4 font-medium ${isDarkMode ? 'text-slate-200' : 'text-gray-600'}`}>
+                        <td className={`py-3 px-4 font-medium ${isDarkMode ? 'text-slate-200' : 'text-gray-600'}`}>
                           <div className="flex flex-col sm:flex-row sm:items-center gap-1.5">
                             <span>{order.eventDate}</span>
                             {(() => {
@@ -573,21 +655,21 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
                         </td>
 
                         {/* ITEMS */}
-                        <td className={`py-4 px-4 font-medium max-w-xs truncate ${isDarkMode ? 'text-slate-200' : 'text-gray-600'}`}>
+                        <td className={`py-3 px-4 font-medium max-w-xs truncate ${isDarkMode ? 'text-slate-200' : 'text-gray-600'}`}>
                           {order.items}
                         </td>
 
                         {/* AMOUNT */}
-                        <td className={`py-4 px-4 font-extrabold text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        <td className={`py-3 px-4 font-extrabold text-xs ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                           ₹{order.amount.toLocaleString()}
                         </td>
 
                         {/* STATUS SELECTOR IN TABLE */}
-                        <td className="py-4 px-4">
+                        <td className="py-3 px-4">
                           <select
                             value={order.status}
                             onChange={(e) => handleStatusChange(order.id, e.target.value as any)}
-                            className={`text-xs font-bold rounded-full px-2.5 py-1 border outline-none cursor-pointer transition shadow-2xs ${
+                            className={`text-[11px] font-bold rounded-full px-2 py-0.5 border outline-none cursor-pointer transition shadow-2xs ${
                               order.status === 'Pending' ? 'bg-amber-100 text-amber-800 border-amber-300' :
                               order.status === 'Completed' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' :
                               'bg-rose-100 text-rose-800 border-rose-300'
@@ -600,43 +682,43 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
                         </td>
 
                         {/* ACTION */}
-                        <td className="py-4 px-5 text-center">
-                          <div className="flex items-center justify-center gap-2">
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
                             <button
                               onClick={() => handlePrintOrder(order)}
-                              className={`p-1.5 rounded-lg transition cursor-pointer ${
+                              className={`p-1 rounded-md transition cursor-pointer ${
                                 isDarkMode ? 'text-slate-300 hover:text-emerald-400 hover:bg-slate-800' : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50'
                               }`}
                               title="Print Order Receipt"
                             >
-                              <Printer className="w-4 h-4" />
+                              <Printer className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => setSelectedOrder(order)}
-                              className={`p-1.5 rounded-lg transition cursor-pointer ${
+                              className={`p-1 rounded-md transition cursor-pointer ${
                                 isDarkMode ? 'text-slate-300 hover:text-white hover:bg-slate-800' : 'text-gray-400 hover:text-[#78350f] hover:bg-amber-50'
                               }`}
                               title="View Order Details"
                             >
-                              <Eye className="w-4 h-4" />
+                              <Eye className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handleEditOrder(order)}
-                              className={`p-1.5 rounded-lg transition cursor-pointer ${
+                              className={`p-1 rounded-md transition cursor-pointer ${
                                 isDarkMode ? 'text-slate-300 hover:text-white hover:bg-slate-800' : 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'
                               }`}
                               title="Edit Order"
                             >
-                              <Edit3 className="w-4 h-4" />
+                              <Edit3 className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handleDeleteOrder(order.id, order.code)}
-                              className={`p-1.5 rounded-lg transition cursor-pointer ${
+                              className={`p-1 rounded-md transition cursor-pointer ${
                                 isDarkMode ? 'text-slate-300 hover:text-rose-400 hover:bg-slate-800' : 'text-gray-400 hover:text-rose-600 hover:bg-rose-50'
                               }`}
                               title="Delete Order"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </td>
