@@ -21,6 +21,7 @@ import { Navbar } from '../components/Navbar';
 import { ReceiptModal, type ReceiptData } from '../components/ReceiptModal';
 import type { Product, CartItem } from '../types/pos';
 import { apiGetProducts, apiCreateProduct, apiCreateBill, apiGetBills, apiGetSettings, apiDeleteBill } from '../services/api';
+import { AddNewProductPage } from './AddNewProductPage';
 
 export interface HeldBill {
   id: string;
@@ -97,6 +98,7 @@ export const POSPage: React.FC<POSPageProps> = ({
   const [activeReceipt, setActiveReceipt] = useState<ReceiptData | null>(null);
   
   // Modal State
+  const [isAddProductMode, setIsAddProductMode] = useState<boolean>(false);
   const [isAddItemOpen, setIsAddItemOpen] = useState<boolean>(false);
   const [newProductName, setNewProductName] = useState<string>('');
   const [newProductCategory, setNewProductCategory] = useState<'Tea' | 'Coffee' | 'Juice' | 'Cool Drinks' | 'Snacks'>('Snacks');
@@ -695,6 +697,35 @@ export const POSPage: React.FC<POSPageProps> = ({
     </div>
   );
 
+  if (isAddProductMode) {
+    return (
+      <AddNewProductPage
+        onNavigate={onNavigate}
+        onBack={() => setIsAddProductMode(false)}
+        onSaveProduct={(newProd: any) => {
+          const formattedProduct: Product = {
+            id: newProd.id || `p_${Date.now()}`,
+            name: newProd.name,
+            category: newProd.category as any,
+            price: newProd.price,
+            stock: newProd.stock === 'infinity' ? 'infinity' : Number(newProd.stock) || 0,
+            status: newProd.status as any,
+            image: newProd.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=500&q=80',
+            description: newProd.description,
+            gst: newProd.gst
+          };
+          setProducts((prev) => [formattedProduct, ...prev]);
+          setIsAddProductMode(false);
+          setNotification(`Added "${newProd.name}" to menu catalog!`);
+        }}
+        isDarkMode={isDarkMode}
+        cafeName={cafeSettings.cafeName}
+        branchLocation={cafeSettings.branchLocation}
+        logoUrl={cafeSettings.logoUrl}
+      />
+    );
+  }
+
   return (
     <div className={`flex h-screen font-sans overflow-hidden transition-colors duration-200 ${
       isDarkMode ? 'bg-[#0f172a] text-slate-100' : 'bg-[#f8fafc] text-gray-800'
@@ -763,7 +794,7 @@ export const POSPage: React.FC<POSPageProps> = ({
               </div>
 
               <button
-                onClick={() => setIsAddItemOpen(true)}
+                onClick={() => setIsAddProductMode(true)}
                 className="bg-[#f97316] hover:bg-orange-600 text-white font-medium text-xs py-2 px-3.5 rounded-xl shadow-sm flex items-center gap-1.5 transition-all active:scale-[0.98] shrink-0 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
@@ -794,9 +825,16 @@ export const POSPage: React.FC<POSPageProps> = ({
             {/* Products Grid Area */}
             <div className="flex-1 overflow-y-auto pr-1 min-h-0">
               {filteredProducts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-gray-400 gap-2">
+                <div className="flex flex-col items-center justify-center h-64 text-gray-400 gap-3">
                   <XCircle className="w-12 h-12 stroke-1" />
                   <p className="text-base font-medium">No products found</p>
+                  <button
+                    onClick={() => setIsAddProductMode(true)}
+                    className="bg-[#f97316] hover:bg-orange-600 text-white font-medium text-xs py-2 px-3.5 rounded-xl shadow-sm flex items-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add New Product</span>
+                  </button>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 pb-6">

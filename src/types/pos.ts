@@ -6,6 +6,8 @@ export interface Product {
   stock: number | 'infinity';
   image: string;
   status?: 'Active' | 'Inactive';
+  description?: string;
+  gst?: number;
 }
 
 export interface CartItem {
