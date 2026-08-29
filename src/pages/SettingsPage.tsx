@@ -118,9 +118,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
     try {
       await apiUpdateSettings(payload);
-      showToast('Settings saved to database & applied everywhere!');
-    } catch {
-      showToast('Settings saved & applied locally!');
+    } catch (err) {
+      console.warn('Using local settings update fallback:', err);
+    }
+
+    if (onNavigate) {
+      onNavigate('POS Billing');
     }
   };
 

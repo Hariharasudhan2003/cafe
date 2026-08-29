@@ -79,7 +79,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       if (savedDeleted) setDeletedCategories(JSON.parse(savedDeleted));
     } catch (e) {}
 
-    apiGetSettings().then(data => { if (data) setCafeSettings(prev => ({ ...prev, ...data })); }).catch(() => {});
+    apiGetSettings().then(data => {
+      if (data) {
+        setCafeSettings(prev => ({ 
+          ...prev, 
+          ...data,
+          logoUrl: (data.logoUrl && data.logoUrl.trim() !== '') ? data.logoUrl : (prev.logoUrl || propLogoUrl || '')
+        }));
+      }
+    }).catch(() => {});
 
     Promise.all([
       apiGetBills().catch(() => []),

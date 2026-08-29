@@ -242,9 +242,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
 
-        {/* Profile Logo - Blank if logoUrl is removed */}
+        {/* Profile Logo - Blank if logoUrl is removed; Hidden on mobile view for POS page */}
         {logoUrl ? (
-          <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-500/40 shadow-xs cursor-pointer shrink-0 bg-slate-800">
+          <div className={`w-8 h-8 rounded-full overflow-hidden border border-gray-500/40 shadow-xs cursor-pointer shrink-0 bg-slate-800 ${isPosPage ? 'hidden sm:block' : ''}`}>
             <img
               src={logoUrl}
               alt="Profile Logo"

@@ -41,6 +41,8 @@ interface POSPageProps {
   logoUrl?: string;
   globalGst?: number;
   taxInclusive?: boolean;
+  toastMessage?: string | null;
+  onClearToast?: () => void;
 }
 
 const DEFAULT_POS_PRODUCTS: Product[] = [
@@ -59,7 +61,9 @@ export const POSPage: React.FC<POSPageProps> = ({
   branchLocation: propBranchLocation,
   logoUrl: propLogoUrl,
   globalGst: propGlobalGst,
-  taxInclusive: propTaxInclusive
+  taxInclusive: propTaxInclusive,
+  toastMessage: propToastMessage,
+  onClearToast
 }) => {
   // State
   const [products, setProducts] = useState<Product[]>(DEFAULT_POS_PRODUCTS);
@@ -106,6 +110,17 @@ export const POSPage: React.FC<POSPageProps> = ({
   // Notification Modal State
   const [notification, setNotification] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (propToastMessage) {
+      setNotification(propToastMessage);
+      const timer = setTimeout(() => {
+        setNotification(null);
+        if (onClearToast) onClearToast();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [propToastMessage, onClearToast]);
+
   // Cart State (Starts empty)
   const [cart, setCart] = useState<CartItem[]>([]);
 
@@ -126,7 +141,7 @@ export const POSPage: React.FC<POSPageProps> = ({
       branchLocation: propBranchLocation || prev.branchLocation,
       globalGst: propGlobalGst !== undefined ? propGlobalGst : prev.globalGst,
       taxInclusive: propTaxInclusive !== undefined ? propTaxInclusive : prev.taxInclusive,
-      logoUrl: propLogoUrl !== undefined ? propLogoUrl : prev.logoUrl
+      logoUrl: (propLogoUrl && propLogoUrl.trim() !== '') ? propLogoUrl : prev.logoUrl
     }));
   }, [propCafeName, propBranchLocation, propGlobalGst, propTaxInclusive, propLogoUrl]);
 
@@ -204,7 +219,15 @@ export const POSPage: React.FC<POSPageProps> = ({
     } catch (e) {}
 
     apiGetSettings()
-      .then((data) => { if (data) setCafeSettings(data); })
+      .then((data) => { 
+        if (data) {
+          setCafeSettings((prev) => ({
+            ...prev,
+            ...data,
+            logoUrl: (data.logoUrl && data.logoUrl.trim() !== '') ? data.logoUrl : (prev.logoUrl || propLogoUrl || '')
+          }));
+        }
+      })
       .catch(() => {});
 
     apiGetProducts()

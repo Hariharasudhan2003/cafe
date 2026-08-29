@@ -60,12 +60,12 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
       ...prev,
       cafeName: propCafeName || prev.cafeName,
       branchLocation: propBranchLocation || prev.branchLocation,
-      logoUrl: propLogoUrl !== undefined ? propLogoUrl : prev.logoUrl
+      logoUrl: (propLogoUrl && propLogoUrl.trim() !== '') ? propLogoUrl : prev.logoUrl
     }));
   }, [propCafeName, propBranchLocation, propLogoUrl]);
 
   useEffect(() => {
-    apiGetSettings().then(data => { if (data) setCafeSettings(prev => ({ ...prev, ...data })); }).catch(() => {});
+    apiGetSettings().then(data => { if (data) setCafeSettings(prev => ({ ...prev, ...data, logoUrl: (data.logoUrl && data.logoUrl.trim() !== '') ? data.logoUrl : (prev.logoUrl || propLogoUrl || '') })); }).catch(() => {});
 
     Promise.all([
       apiGetBills().catch(() => []),

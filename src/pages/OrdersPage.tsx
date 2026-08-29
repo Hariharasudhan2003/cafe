@@ -87,11 +87,11 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
     apiGetSettings()
       .then((data) => {
         if (data) {
-          setSettings({
-            cafeName: data.cafeName || 'BrewMaster',
-            branchLocation: data.branchLocation || 'Downtown Branch',
-            logoUrl: data.logoUrl || ''
-          });
+          setSettings(prev => ({
+            cafeName: data.cafeName || prev.cafeName || 'BrewMaster',
+            branchLocation: data.branchLocation || prev.branchLocation || 'Downtown Branch',
+            logoUrl: (data.logoUrl && data.logoUrl.trim() !== '') ? data.logoUrl : (prev.logoUrl || logoUrl || '')
+          }));
         }
       })
       .catch(() => {});

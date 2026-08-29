@@ -196,7 +196,7 @@ export const BookNewOrderPage: React.FC<BookNewOrderPageProps> = ({
     }
 
     apiGetSettings()
-      .then((data) => { if (data) setCafeSettings(data); })
+      .then((data) => { if (data) setCafeSettings(prev => ({ ...prev, ...data, logoUrl: (data.logoUrl && data.logoUrl.trim() !== '') ? data.logoUrl : prev.logoUrl })); })
       .catch(() => {});
 
     apiGetProducts()

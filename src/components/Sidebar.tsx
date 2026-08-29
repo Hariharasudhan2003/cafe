@@ -8,7 +8,7 @@ import {
   Settings, 
   LogOut, 
   Plus,
-  X 
+  X
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -70,21 +70,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </h1>
             <button 
               onClick={onCloseMobile}
-              className="lg:hidden text-gray-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+              className="lg:hidden text-gray-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer shrink-0"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* Manager Profile Box */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-800/50 border border-slate-700/40">
             {logoUrl ? (
               <img
                 src={logoUrl}
                 alt="Cafe Logo"
-                className="w-10 h-10 rounded-full object-cover border-2 border-slate-600 shadow-sm shrink-0 bg-slate-800"
+                className="w-10 h-10 rounded-full object-cover border-2 border-orange-500/50 shadow-sm shrink-0 bg-slate-800"
               />
-            ) : null}
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-slate-700 border-2 border-slate-600 shadow-sm shrink-0 flex items-center justify-center text-white font-bold text-sm">
+                {cafeName ? cafeName.charAt(0).toUpperCase() : 'C'}
+              </div>
+            )}
             <div className="flex flex-col overflow-hidden">
               <span className="text-sm font-semibold text-white leading-snug truncate">
                 {cafeName}

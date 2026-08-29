@@ -17,13 +17,19 @@ interface ManageCategoriesPageProps {
   onBack: () => void;
   isDarkMode?: boolean;
   products?: ProductItem[];
+  cafeName?: string;
+  branchLocation?: string;
+  logoUrl?: string;
 }
 
 export const ManageCategoriesPage: React.FC<ManageCategoriesPageProps> = ({
   onNavigate,
   onBack,
   isDarkMode = false,
-  products = []
+  products = [],
+  cafeName,
+  branchLocation,
+  logoUrl
 }) => {
   const [activeTab, setActiveTab] = useState<string>('Products');
   const [categoryName, setCategoryName] = useState<string>('');
@@ -124,6 +130,9 @@ export const ManageCategoriesPage: React.FC<ManageCategoriesPageProps> = ({
         activeTab={activeTab}
         onTabChange={handleTabChange}
         onNewOrder={() => handleTabChange('POS Billing')}
+        cafeName={cafeName}
+        branchLocation={branchLocation}
+        logoUrl={logoUrl}
       />
 
       {/* Main Container */}
@@ -134,6 +143,8 @@ export const ManageCategoriesPage: React.FC<ManageCategoriesPageProps> = ({
           onViewChange={(view) => handleTabChange(view)}
           onCreateBill={() => handleTabChange('POS Billing')}
           isDarkMode={isDarkMode}
+          cafeName={cafeName}
+          logoUrl={logoUrl}
         />
 
         {/* Toast Notification */}

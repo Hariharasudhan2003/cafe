@@ -12,13 +12,23 @@ import { apiGetSettings } from './services/api';
 function App() {
   const [currentTab, setCurrentTab] = useState<string>('POS Billing');
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
-  const [globalSettings, setGlobalSettings] = useState({
-    cafeName: 'BrewMaster',
-    branchLocation: 'Downtown Branch',
-    contactNumber: '+1 (555) 123-4567',
-    globalGst: 18,
-    taxInclusive: true,
-    logoUrl: ''
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const [globalSettings, setGlobalSettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cafe_settings');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {}
+    return {
+      cafeName: 'BrewMaster',
+      branchLocation: 'Downtown Branch',
+      contactNumber: '+1 (555) 123-4567',
+      globalGst: 18,
+      taxInclusive: true,
+      logoUrl: ''
+    };
   });
 
   useEffect(() => {
@@ -29,15 +39,21 @@ function App() {
     apiGetSettings()
       .then((data) => {
         if (data) {
-          setGlobalSettings((prev) => ({
-            ...prev,
-            cafeName: data.cafeName || prev.cafeName,
-            branchLocation: data.branchLocation || prev.branchLocation,
-            contactNumber: data.contactNumber || prev.contactNumber,
-            globalGst: data.globalGst !== undefined ? data.globalGst : prev.globalGst,
-            taxInclusive: data.taxInclusive !== undefined ? data.taxInclusive : prev.taxInclusive,
-            logoUrl: data.logoUrl || prev.logoUrl
-          }));
+          setGlobalSettings((prev: any) => {
+            const updated = {
+              ...prev,
+              cafeName: data.cafeName || prev.cafeName,
+              branchLocation: data.branchLocation || prev.branchLocation,
+              contactNumber: data.contactNumber || prev.contactNumber,
+              globalGst: data.globalGst !== undefined ? data.globalGst : prev.globalGst,
+              taxInclusive: data.taxInclusive !== undefined ? data.taxInclusive : prev.taxInclusive,
+              logoUrl: (data.logoUrl && data.logoUrl.trim() !== '') ? data.logoUrl : prev.logoUrl
+            };
+            try {
+              localStorage.setItem('cafe_settings', JSON.stringify(updated));
+            } catch (e) {}
+            return updated;
+          });
           if (data.themeMode === 'Dark') {
             setIsDarkMode(true);
           }
@@ -47,10 +63,18 @@ function App() {
   }, []);
 
   const handleUpdateSettings = (newSettings: any) => {
-    setGlobalSettings((prev) => ({
-      ...prev,
-      ...newSettings
-    }));
+    setGlobalSettings((prev: any) => {
+      const updated = {
+        ...prev,
+        ...newSettings
+      };
+      try {
+        localStorage.setItem('cafe_settings', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+    setToastMessage('Saved successfully');
+    setCurrentTab('POS Billing');
   };
 
   const renderCurrentView = () => {
@@ -120,6 +144,8 @@ function App() {
             logoUrl={globalSettings.logoUrl}
             globalGst={globalSettings.globalGst}
             taxInclusive={globalSettings.taxInclusive}
+            toastMessage={toastMessage}
+            onClearToast={() => setToastMessage(null)}
           />
         );
     }

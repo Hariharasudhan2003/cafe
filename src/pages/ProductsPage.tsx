@@ -81,7 +81,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
       ...prev,
       cafeName: propCafeName || prev.cafeName,
       branchLocation: propBranchLocation || prev.branchLocation,
-      logoUrl: propLogoUrl !== undefined ? propLogoUrl : prev.logoUrl
+      logoUrl: (propLogoUrl && propLogoUrl.trim() !== '') ? propLogoUrl : prev.logoUrl
     }));
   }, [propCafeName, propBranchLocation, propLogoUrl]);
 
@@ -96,7 +96,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
             ...prev,
             cafeName: settings.cafeName || prev.cafeName,
             branchLocation: settings.branchLocation || prev.branchLocation,
-            logoUrl: settings.logoUrl !== undefined ? settings.logoUrl : prev.logoUrl
+            logoUrl: (settings.logoUrl && settings.logoUrl.trim() !== '') ? settings.logoUrl : prev.logoUrl
           }));
         }
       })
@@ -240,6 +240,9 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
         onBack={() => setIsCategoryMode(false)}
         isDarkMode={isDarkMode}
         products={products}
+        cafeName={cafeSettings.cafeName}
+        branchLocation={cafeSettings.branchLocation}
+        logoUrl={cafeSettings.logoUrl}
       />
     );
   }

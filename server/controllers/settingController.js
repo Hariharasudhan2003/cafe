@@ -10,7 +10,8 @@ export const getSettings = async (req, res) => {
         contactNumber: '+1 (555) 123-4567',
         globalGst: 18,
         taxInclusive: true,
-        themeMode: 'Light'
+        themeMode: 'Light',
+        logoUrl: ''
       });
     }
     res.json(settings);
