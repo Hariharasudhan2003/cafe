@@ -1,5 +1,5 @@
 const getApiBaseUrl = (): string => {
-  let envUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  let envUrl = import.meta.env.VITE_API_URL || 'https://cafe-dppn.onrender.com/api';
   envUrl = envUrl.trim();
   if (envUrl.endsWith('/')) {
     envUrl = envUrl.slice(0, -1);
